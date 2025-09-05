@@ -1,12 +1,35 @@
-# React + Vite
+# Smart City Issue Tracker – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The **Smart City Issue Tracker (Frontend)** is a modern web application built with **Vite, React (JavaScript), and Material-UI**.  
+It enables citizens to **report city infrastructure issues**, staff to **manage and resolve tasks**, and administrators to **monitor and assign work** — all through role-based dashboards.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Project Overview
 
-## Expanding the ESLint configuration
+Urban infrastructure issues such as potholes, streetlight failures, or sanitation problems often go untracked or unresolved due to lack of transparency.  
+The **Smart City Issue Tracker** solves this by offering a **digital platform** where:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Citizens can report issues and track progress.  
+- Staff can view assigned tasks, mark them as resolved, and provide proof of completion.  
+- Admins can assign issues, monitor real-time updates, and maintain accountability.  
+
+This ensures a **transparent, efficient, and citizen-friendly solution** to civic issue management.
+
+---
+
+## Features
+
+- **Citizen Dashboard** – Report new issues, upload photos, and track resolution status.  
+- **Staff Dashboard** – View assigned issues, update status, and provide resolution details.  
+- **Admin Dashboard** – Assign issues to staff, review reports, and oversee progress.  
+- **Responsive UI** – Works seamlessly on desktop and mobile.  
+
+---
+
+## Tech Stack
+
+- **Frontend Framework** – React (JavaScript)  
+- **Bundler** – Vite  
+- **UI Library** – Material-UI (MUI)  
+- **Routing** – React Router
