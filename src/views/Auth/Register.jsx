@@ -23,10 +23,11 @@ import { setAuth } from '../../state/authSlice';
 import apiClient from '../../toolkit/apiClient';
 import { REGISTER_API } from '../../const/api';
 import { LOGIN_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
+import { setToken, setUser } from '../../toolkit/storage';
 
 const schema = yup.object().shape({
-    full_name: yup.string().required('Full Name is required'),
-    user_name: yup.string().required('Username is required'),
+    fullName: yup.string().required('Full Name is required'),
+    userName: yup.string().required('Username is required'),
     password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
     confirmPassword: yup.string()
         .oneOf([yup.ref('password'), null], 'Passwords must match')
@@ -52,20 +53,28 @@ function Register() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-    } = useForm({
+    const { register: formRegister, handleSubmit, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
     });
 
     const onSubmit = async (data) => {
         setLoading(true);
         setApiError(null);
+
         try {
-            const response = await apiClient.post(REGISTER_API, data);
-            dispatch(setAuth(response.data));
+            const response = await apiClient.post(REGISTER_API, {
+                fullName: data.fullName,
+                userName: data.userName,
+                password: data.password,
+            });
+
+            const { accessToken, fullName, userName, roles } = response.data;
+
+            setToken(accessToken);
+            setUser({ fullName, userName, roles });
+
+            dispatch(setAuth({ accessToken, fullName, userName, roles }));
+
             navigate(CITIZEN_DASHBOARD_PATH);
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
@@ -92,7 +101,7 @@ function Register() {
                         <LockOutlinedIcon />
                     </Avatar>
                     <Typography component="h1" variant="h5">
-                        Sign Up
+                        Register
                     </Typography>
                     <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3, width: '100%' }}>
                         {apiError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{apiError}</Alert>}
@@ -100,27 +109,27 @@ function Register() {
                         <TextField
                             margin="normal"
                             autoComplete="name"
-                            name="full_name"
+                            name="fullName"
                             required
                             fullWidth
-                            id="full_name"
+                            id="fullName"
                             label="Full Name"
                             autoFocus
-                            {...register('full_name')}
-                            error={!!errors.full_name}
-                            helperText={errors.full_name?.message}
+                            {...formRegister('fullName')}
+                            error={!!errors.fullName}
+                            helperText={errors.fullName?.message}
                         />
                         <TextField
                             margin="normal"
                             required
                             fullWidth
-                            id="user_name"
+                            id="userName"
                             label="Username"
-                            name="user_name"
+                            name="userName"
                             autoComplete="username"
-                            {...register('user_name')}
-                            error={!!errors.user_name}
-                            helperText={errors.user_name?.message}
+                            {...formRegister('userName')}
+                            error={!!errors.userName}
+                            helperText={errors.userName?.message}
                         />
                         <TextField
                             margin="normal"
@@ -131,7 +140,7 @@ function Register() {
                             type="password"
                             id="password"
                             autoComplete="new-password"
-                            {...register('password')}
+                            {...formRegister('password')}
                             error={!!errors.password}
                             helperText={errors.password?.message}
                         />
@@ -143,7 +152,7 @@ function Register() {
                             label="Confirm Password"
                             type="password"
                             id="confirmPassword"
-                            {...register('confirmPassword')}
+                            {...formRegister('confirmPassword')}
                             error={!!errors.confirmPassword}
                             helperText={errors.confirmPassword?.message}
                         />
@@ -154,10 +163,10 @@ function Register() {
                             sx={{ mt: 3, mb: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
                         </Button>
                         <Link component={RouterLink} to={LOGIN_PATH} variant="body2">
-                            Already have an account? Sign in
+                            Already have an account? Login
                         </Link>
                     </Box>
                 </Paper>

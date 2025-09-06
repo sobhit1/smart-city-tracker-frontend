@@ -23,9 +23,10 @@ import { setAuth } from '../../state/authSlice';
 import apiClient from '../../toolkit/apiClient';
 import { LOGIN_API } from '../../const/api';
 import { REGISTER_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
+import { setToken, setUser } from '../../toolkit/storage';
 
 const schema = yup.object().shape({
-  user_name: yup.string().required('Username is required'),
+  userName: yup.string().required('Username is required'),
   password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
 });
 
@@ -48,11 +49,7 @@ function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
   });
 
@@ -61,7 +58,14 @@ function Login() {
     setApiError(null);
     try {
       const response = await apiClient.post(LOGIN_API, data);
-      dispatch(setAuth(response.data));
+
+      const { accessToken, fullName, userName, roles } = response.data;
+
+      setToken(accessToken);
+      setUser({ fullName, userName, roles });
+
+      dispatch(setAuth({ accessToken, fullName, userName, roles }));
+
       navigate(CITIZEN_DASHBOARD_PATH);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
@@ -88,7 +92,7 @@ function Login() {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Sign In
+            Login
           </Typography>
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
             {apiError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{apiError}</Alert>}
@@ -97,14 +101,14 @@ function Login() {
               margin="normal"
               required
               fullWidth
-              id="user_name"
+              id="userName"
               label="Username"
-              name="user_name"
+              name="userName"
               autoComplete="username"
               autoFocus
-              {...register('user_name')}
-              error={!!errors.user_name}
-              helperText={errors.user_name?.message}
+              {...register('userName')}
+              error={!!errors.userName}
+              helperText={errors.userName?.message}
             />
             <TextField
               margin="normal"
@@ -126,10 +130,10 @@ function Login() {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
             </Button>
             <Link component={RouterLink} to={REGISTER_PATH} variant="body2">
-              {"Don't have an account? Sign Up"}
+              {"Don't have an account? Register"}
             </Link>
           </Box>
         </Paper>

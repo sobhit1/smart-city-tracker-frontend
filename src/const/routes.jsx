@@ -1,6 +1,7 @@
 // --- Public Routes ---
 export const LOGIN_PATH = '/login';
 export const REGISTER_PATH = '/register';
+export const LOGOUT_PATH = '/logout';
 
 // --- Citizen Routes ---
 export const CITIZEN_DASHBOARD_PATH = '/dashboard';
@@ -13,5 +14,3 @@ export const STAFF_DASHBOARD_PATH = '/staff/dashboard';
 
 // --- Admin Routes ---
 export const ADMIN_DASHBOARD_PATH = '/admin/dashboard';
-export const ADMIN_MANAGE_USERS_PATH = '/admin/users';
-export const ADMIN_AUDIT_LOGS_PATH = '/admin/logs';

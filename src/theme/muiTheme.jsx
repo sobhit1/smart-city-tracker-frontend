@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 
 const muiTheme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
       main: '#0d6efd',
     },
@@ -16,12 +16,12 @@ const muiTheme = createTheme({
       main: '#dc3545',
     },
     background: {
-      default: '#f8f9fa',
-      paper: '#ffffff',
+      default: '#121212',
+      paper: '#1e1e1e',
     },
     text: {
-      primary: '#212529',
-      secondary: '#6c757d',
+      primary: '#ffffff',
+      secondary: '#b0b0b0',
     },
   },
 
@@ -38,7 +38,6 @@ const muiTheme = createTheme({
   spacing: 8,
 
   components: {
-    // --- Button ---
     MuiButton: {
       defaultProps: {
         disableElevation: true,
@@ -52,28 +51,31 @@ const muiTheme = createTheme({
       },
     },
     
-    // --- Card ---
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          backgroundColor: '#1e1e1e',
         },
       },
     },
 
-    // --- Text Field ---
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: '6px',
+            backgroundColor: '#1e1e1e',
+            color: '#ffffff',
+          },
+          '& .MuiInputLabel-root': {
+            color: '#b0b0b0',
           },
         },
       },
     },
 
-    // --- App Bar (Navbar) ---
     MuiAppBar: {
       defaultProps: {
         elevation: 0,
@@ -81,8 +83,8 @@ const muiTheme = createTheme({
       },
       styleOverrides: {
         root: {
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #dee2e6',
+          backgroundColor: '#1e1e1e',
+          borderBottom: '1px solid #333333',
         },
       },
     },
