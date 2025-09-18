@@ -1,10 +1,11 @@
 import { createTheme } from '@mui/material/styles';
 
+// A professional and modern dark theme palette inspired by developer-centric UIs like Jira.
 const muiTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#58a6ff',
+      main: '#5299FF', // A brighter, more accessible blue for primary actions.
     },
     secondary: {
       main: '#8b949e',
@@ -16,92 +17,102 @@ const muiTheme = createTheme({
       main: '#f85149',
     },
     background: {
-      default: '#0d1117',
-      paper: '#161b22',
+      default: '#1D2125', // A dark charcoal background, not pure black.
+      paper: '#282E33',   // A slightly lighter charcoal for cards and tables.
     },
     text: {
-      primary: '#c9d1d9',
-      secondary: '#8b949e',
+      primary: '#E6EDF2',   // A light grey for high-contrast primary text.
+      secondary: '#7D858D', // A muted grey for secondary text and labels.
     },
-    divider: '#30363d',
+    divider: '#373E47', // A subtle color for borders and dividers.
   },
 
   typography: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    h1: { fontSize: '2.25rem', fontWeight: 600 },
-    h2: { fontSize: '2rem', fontWeight: 600 },
-    h3: { fontSize: '1.75rem', fontWeight: 600 },
-    h4: { fontSize: '1.5rem', fontWeight: 600 },
-    h5: { fontSize: '1.25rem', fontWeight: 600 },
-    h6: { fontSize: '1rem', fontWeight: 600 },
+    fontFamily:
+      '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    h4: { fontWeight: 600 },
   },
-  
-  spacing: 8,
 
   components: {
-    MuiButton: {
-      defaultProps: {
-        disableElevation: true,
-      },
+    MuiDataGrid: {
       styleOverrides: {
         root: {
-          textTransform: 'none', 
-          borderRadius: '6px',
-          padding: '10px 20px',
+          border: `1px solid #373E47`, // full table border
+
+          // Table cells
+          '& .MuiDataGrid-cell': {
+            borderBottom: `1px solid #373E47`,
+            borderRight: `1px solid #373E47`,
+          },
+
+          // Column headers
+          '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: '#1D2125',
+            borderBottom: `1px solid #373E47`,
+          },
+          '& .MuiDataGrid-columnHeader': {
+            borderRight: `1px solid #373E47`,
+          },
+
+          // Remove last column’s extra border (avoid double line)
+          '& .MuiDataGrid-columnHeader:last-child, & .MuiDataGrid-cell:last-child': {
+            borderRight: 'none',
+          },
+
+          // Footer
+          '& .MuiDataGrid-footerContainer': {
+            borderTop: `1px solid #373E47`,
+          },
+
+          // Toolbar
+          '& .MuiDataGrid-toolbarContainer': {
+            padding: '8px',
+            '& .MuiButton-root': {
+              color: '#7D858D',
+            },
+          },
+
+          // Row hover effect
+          '& .MuiDataGrid-row:hover': {
+            backgroundColor: '#2C333A',
+          },
         },
       },
     },
-
     MuiPaper: {
-        styleOverrides: {
-            root: {
-                backgroundImage: 'none',
-            }
-        }
-    },
-    MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '8px',
-          border: '1px solid #30363d',
-          boxShadow: 'none',
+          backgroundImage: 'none', // Remove MUI's default gradient on dark paper
         },
       },
     },
-
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: '6px',
+        },
+      },
+    },
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: '6px',
-            backgroundColor: '#0d1117',
-            color: '#c9d1d9',
             '& fieldset': {
-              borderColor: '#30363d',
+              borderColor: '#373E47',
             },
             '&:hover fieldset': {
               borderColor: '#8b949e',
             },
-            '&.Mui-focused fieldset': {
-              borderColor: '#58a6ff',
-            },
-          },
-          '& .MuiInputLabel-root': {
-            color: '#8b949e',
           },
         },
       },
     },
-
     MuiAppBar: {
-      defaultProps: {
-        elevation: 0,
-        color: 'inherit',
-      },
       styleOverrides: {
         root: {
-          backgroundColor: '#161b22',
-          borderBottom: '1px solid #30363d',
+          backgroundColor: '#282E33',
+          borderBottom: '1px solid #373E47',
         },
       },
     },

@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 
 import Loader from './components/Loader';
+import MainLayout from './components/layout/MainLayout';
 import {
   LOGIN_PATH,
   REGISTER_PATH,
@@ -46,7 +47,9 @@ function AppRoutes() {
           path={CITIZEN_DASHBOARD_PATH}
           element={
             <ProtectedRoute allowedRoles={['ROLE_CITIZEN']}>
-              <CitizenDashboard />
+              <MainLayout>
+                <CitizenDashboard />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -54,7 +57,9 @@ function AppRoutes() {
           path={STAFF_DASHBOARD_PATH}
           element={
             <ProtectedRoute allowedRoles={['ROLE_STAFF']}>
-              <StaffDashboard />
+              <MainLayout>
+                <StaffDashboard />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -62,7 +67,9 @@ function AppRoutes() {
           path={ADMIN_DASHBOARD_PATH}
           element={
             <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
-              <AdminDashboard />
+              <MainLayout>
+                <AdminDashboard />
+              </MainLayout>
             </ProtectedRoute>
           }
         />

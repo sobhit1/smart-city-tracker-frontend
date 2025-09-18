@@ -1,7 +1,6 @@
 const ACCESS_TOKEN_KEY = 'accessToken';
 const AUTH_USER_KEY = 'authUser';
 
-// --- Access Token ---
 export const setToken = (token) => {
   if (token) {
     localStorage.setItem(ACCESS_TOKEN_KEY, token);
@@ -18,7 +17,6 @@ export const removeToken = () => {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
 };
 
-// --- User Information ---
 export const setUser = (user) => {
   if (user) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
@@ -41,7 +39,6 @@ export const removeUser = () => {
   localStorage.removeItem(AUTH_USER_KEY);
 };
 
-// --- Combined Logout Function ---
 export const clearAuthStorage = () => {
   removeToken();
   removeUser();
