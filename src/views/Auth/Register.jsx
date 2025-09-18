@@ -12,7 +12,6 @@ import {
     TextField,
     Button,
     Link,
-    Alert,
     CircularProgress,
     Paper,
     Avatar,
@@ -20,10 +19,10 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
 import { setAuth } from '../../state/authSlice';
+import { showNotification } from '../../state/notificationSlice';
 import apiClient from '../../toolkit/apiClient';
 import { REGISTER_API } from '../../const/api';
 import { LOGIN_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
-import { setToken, setUser } from '../../toolkit/storage';
 
 const schema = yup.object().shape({
     fullName: yup.string().required('Full Name is required'),
@@ -49,36 +48,30 @@ function Copyright(props) {
 
 function Register() {
     const [loading, setLoading] = useState(false);
-    const [apiError, setApiError] = useState(null);
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const { register: formRegister, handleSubmit, formState: { errors } } = useForm({
+    const { register, handleSubmit, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
     });
 
     const onSubmit = async (data) => {
         setLoading(true);
-        setApiError(null);
-
         try {
-            const response = await apiClient.post(REGISTER_API, {
+            const payload = {
                 fullName: data.fullName,
                 userName: data.userName,
                 password: data.password,
-            });
+            };
 
-            const { accessToken, fullName, userName, roles } = response.data;
+            const response = await apiClient.post(REGISTER_API, payload);
 
-            setToken(accessToken);
-            setUser({ fullName, userName, roles });
-
-            dispatch(setAuth({ accessToken, fullName, userName, roles }));
+            dispatch(setAuth(response.data));
 
             navigate(CITIZEN_DASHBOARD_PATH);
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-            setApiError(errorMessage);
+            dispatch(showNotification({ message: errorMessage, severity: 'error' }));
         } finally {
             setLoading(false);
         }
@@ -104,7 +97,6 @@ function Register() {
                         Register
                     </Typography>
                     <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3, width: '100%' }}>
-                        {apiError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{apiError}</Alert>}
 
                         <TextField
                             margin="normal"
@@ -115,7 +107,7 @@ function Register() {
                             id="fullName"
                             label="Full Name"
                             autoFocus
-                            {...formRegister('fullName')}
+                            {...register('fullName')}
                             error={!!errors.fullName}
                             helperText={errors.fullName?.message}
                         />
@@ -127,7 +119,7 @@ function Register() {
                             label="Username"
                             name="userName"
                             autoComplete="username"
-                            {...formRegister('userName')}
+                            {...register('userName')}
                             error={!!errors.userName}
                             helperText={errors.userName?.message}
                         />
@@ -140,7 +132,7 @@ function Register() {
                             type="password"
                             id="password"
                             autoComplete="new-password"
-                            {...formRegister('password')}
+                            {...register('password')}
                             error={!!errors.password}
                             helperText={errors.password?.message}
                         />
@@ -152,7 +144,7 @@ function Register() {
                             label="Confirm Password"
                             type="password"
                             id="confirmPassword"
-                            {...formRegister('confirmPassword')}
+                            {...register('confirmPassword')}
                             error={!!errors.confirmPassword}
                             helperText={errors.confirmPassword?.message}
                         />

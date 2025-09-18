@@ -4,25 +4,26 @@ const muiTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#0d6efd',
+      main: '#58a6ff',
     },
     secondary: {
-      main: '#6c757d',
+      main: '#8b949e',
     },
     success: {
-      main: '#198754',
+      main: '#3fb950',
     },
     error: {
-      main: '#dc3545',
+      main: '#f85149',
     },
     background: {
-      default: '#121212',
-      paper: '#1e1e1e',
+      default: '#0d1117',
+      paper: '#161b22',
     },
     text: {
-      primary: '#ffffff',
-      secondary: '#b0b0b0',
+      primary: '#c9d1d9',
+      secondary: '#8b949e',
     },
+    divider: '#30363d',
   },
 
   typography: {
@@ -50,13 +51,20 @@ const muiTheme = createTheme({
         },
       },
     },
-    
+
+    MuiPaper: {
+        styleOverrides: {
+            root: {
+                backgroundImage: 'none',
+            }
+        }
+    },
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-          backgroundColor: '#1e1e1e',
+          border: '1px solid #30363d',
+          boxShadow: 'none',
         },
       },
     },
@@ -66,11 +74,20 @@ const muiTheme = createTheme({
         root: {
           '& .MuiOutlinedInput-root': {
             borderRadius: '6px',
-            backgroundColor: '#1e1e1e',
-            color: '#ffffff',
+            backgroundColor: '#0d1117',
+            color: '#c9d1d9',
+            '& fieldset': {
+              borderColor: '#30363d',
+            },
+            '&:hover fieldset': {
+              borderColor: '#8b949e',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#58a6ff',
+            },
           },
           '& .MuiInputLabel-root': {
-            color: '#b0b0b0',
+            color: '#8b949e',
           },
         },
       },
@@ -83,8 +100,8 @@ const muiTheme = createTheme({
       },
       styleOverrides: {
         root: {
-          backgroundColor: '#1e1e1e',
-          borderBottom: '1px solid #333333',
+          backgroundColor: '#161b22',
+          borderBottom: '1px solid #30363d',
         },
       },
     },

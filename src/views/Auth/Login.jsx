@@ -12,7 +12,6 @@ import {
   TextField,
   Button,
   Link,
-  Alert,
   CircularProgress,
   Paper,
   Avatar,
@@ -20,10 +19,10 @@ import {
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
 import { setAuth } from '../../state/authSlice';
+import { showNotification } from '../../state/notificationSlice';
 import apiClient from '../../toolkit/apiClient';
 import { LOGIN_API } from '../../const/api';
 import { REGISTER_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
-import { setToken, setUser } from '../../toolkit/storage';
 
 const schema = yup.object().shape({
   userName: yup.string().required('Username is required'),
@@ -45,7 +44,6 @@ function Copyright(props) {
 
 function Login() {
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -55,21 +53,15 @@ function Login() {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    setApiError(null);
     try {
       const response = await apiClient.post(LOGIN_API, data);
 
-      const { accessToken, fullName, userName, roles } = response.data;
-
-      setToken(accessToken);
-      setUser({ fullName, userName, roles });
-
-      dispatch(setAuth({ accessToken, fullName, userName, roles }));
+      dispatch(setAuth(response.data));
 
       navigate(CITIZEN_DASHBOARD_PATH);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      setApiError(errorMessage);
+      dispatch(showNotification({ message: errorMessage, severity: 'error' }));
     } finally {
       setLoading(false);
     }
@@ -95,7 +87,6 @@ function Login() {
             Login
           </Typography>
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
-            {apiError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{apiError}</Alert>}
 
             <TextField
               margin="normal"
