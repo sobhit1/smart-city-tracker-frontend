@@ -11,6 +11,7 @@ import {
   CITIZEN_DASHBOARD_PATH,
   STAFF_DASHBOARD_PATH,
   ADMIN_DASHBOARD_PATH,
+  REPORT_ISSUE_PATH,
 } from './const/routes';
 
 const Login = lazy(() => import('./views/Auth/Login'));
@@ -18,6 +19,7 @@ const Register = lazy(() => import('./views/Auth/Register'));
 const CitizenDashboard = lazy(() => import('./views/Citizen/Dashboard'));
 const StaffDashboard = lazy(() => import('./views/Staff/Dashboard'));
 const AdminDashboard = lazy(() => import('./views/Admin/Dashboard'));
+const ReportIssue = lazy(() => import('./views/Citizen/ReportIssue'));
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -49,6 +51,16 @@ function AppRoutes() {
             <ProtectedRoute allowedRoles={['ROLE_CITIZEN']}>
               <MainLayout>
                 <CitizenDashboard />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={REPORT_ISSUE_PATH}
+          element={
+            <ProtectedRoute allowedRoles={['ROLE_CITIZEN']}>
+              <MainLayout>
+                <ReportIssue />
               </MainLayout>
             </ProtectedRoute>
           }

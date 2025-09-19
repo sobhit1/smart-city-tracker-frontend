@@ -20,11 +20,6 @@ import apiClient from '../../toolkit/apiClient';
 import { LOGOUT_API } from '../../const/api';
 import { LOGIN_PATH } from '../../const/routes';
 
-/**
- * A helper function to get the user's initials from their full name.
- * @param {string} name - The user's full name.
- * @returns {string} The user's initials (e.g., "JD" for "John Doe").
- */
 const getInitials = (name = '') => {
   const nameParts = name.split(' ');
   const firstNameInitial = nameParts[0] ? nameParts[0][0] : '';
@@ -32,16 +27,11 @@ const getInitials = (name = '') => {
   return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
 };
 
-/**
- * The main navigation bar for the application.
- * Features a user menu with an avatar and a logout option.
- */
 function Navbar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  // State to manage the user menu's open/closed status.
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -54,7 +44,7 @@ function Navbar() {
   };
 
   const handleLogout = async () => {
-    handleClose(); // Close the menu first
+    handleClose();
     try {
       await apiClient.post(LOGOUT_API);
     } catch (error) {

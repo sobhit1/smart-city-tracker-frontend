@@ -1,11 +1,10 @@
 import { createTheme } from '@mui/material/styles';
 
-// A professional and modern dark theme palette inspired by developer-centric UIs like Jira.
 const muiTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#5299FF', // A brighter, more accessible blue for primary actions.
+      main: '#5299FF',
     },
     secondary: {
       main: '#8b949e',
@@ -17,14 +16,14 @@ const muiTheme = createTheme({
       main: '#f85149',
     },
     background: {
-      default: '#1D2125', // A dark charcoal background, not pure black.
-      paper: '#282E33',   // A slightly lighter charcoal for cards and tables.
+      default: '#1D2125',
+      paper: '#282E33',
     },
     text: {
-      primary: '#E6EDF2',   // A light grey for high-contrast primary text.
-      secondary: '#7D858D', // A muted grey for secondary text and labels.
+      primary: '#E6EDF2', 
+      secondary: '#7D858D',
     },
-    divider: '#373E47', // A subtle color for borders and dividers.
+    divider: '#373E47',
   },
 
   typography: {
@@ -37,15 +36,13 @@ const muiTheme = createTheme({
     MuiDataGrid: {
       styleOverrides: {
         root: {
-          border: `1px solid #373E47`, // full table border
+          border: `1px solid #373E47`,
 
-          // Table cells
           '& .MuiDataGrid-cell': {
             borderBottom: `1px solid #373E47`,
             borderRight: `1px solid #373E47`,
           },
 
-          // Column headers
           '& .MuiDataGrid-columnHeaders': {
             backgroundColor: '#1D2125',
             borderBottom: `1px solid #373E47`,
@@ -54,17 +51,14 @@ const muiTheme = createTheme({
             borderRight: `1px solid #373E47`,
           },
 
-          // Remove last column’s extra border (avoid double line)
           '& .MuiDataGrid-columnHeader:last-child, & .MuiDataGrid-cell:last-child': {
             borderRight: 'none',
           },
 
-          // Footer
           '& .MuiDataGrid-footerContainer': {
             borderTop: `1px solid #373E47`,
           },
 
-          // Toolbar
           '& .MuiDataGrid-toolbarContainer': {
             padding: '8px',
             '& .MuiButton-root': {
@@ -72,7 +66,6 @@ const muiTheme = createTheme({
             },
           },
 
-          // Row hover effect
           '& .MuiDataGrid-row:hover': {
             backgroundColor: '#2C333A',
           },
@@ -82,7 +75,7 @@ const muiTheme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundImage: 'none', // Remove MUI's default gradient on dark paper
+          backgroundImage: 'none',
         },
       },
     },

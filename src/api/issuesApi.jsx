@@ -1,9 +1,6 @@
 import apiClient from '../toolkit/apiClient';
 import { ISSUES_ENDPOINT } from '../const/api';
 
-// --- Mock Data ---
-// A realistic set of fake issues to simulate a response from the backend.
-// This allows us to build the UI without waiting for the API to be ready.
 const mockIssues = [
   {
     id: 'IS-101',
@@ -42,23 +39,11 @@ const mockIssues = [
   },
 ];
 
-/**
- * Fetches a list of issues from the backend.
- * Currently, it returns mock data to simulate an API call.
- *
- * @param {object} filters - An object containing filter parameters (e.g., { search, category, status }).
- * @returns {Promise<Array<object>>} A promise that resolves to an array of issue objects.
- */
 export const fetchIssues = async (filters = {}) => {
   console.log('Fetching issues with filters:', filters);
-  // In a real implementation, you would use the apiClient:
-  // const response = await apiClient.get(ISSUES_ENDPOINT, { params: filters });
-  // return response.data;
 
-  // --- Simulate network delay for mock data ---
-  await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second delay
+  await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Basic filtering logic for the mock data
   let filteredIssues = mockIssues;
   if (filters.search) {
     filteredIssues = filteredIssues.filter(issue =>
@@ -73,4 +58,12 @@ export const fetchIssues = async (filters = {}) => {
   }
 
   return filteredIssues;
+};
+
+export const createIssue = async (issueData) => {
+  console.log('Submitting new issue:', issueData);
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  return { message: 'Issue created successfully' };
 };

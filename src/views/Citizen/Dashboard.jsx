@@ -85,12 +85,11 @@ function CitizenDashboard() {
   }
 
   return (
-    // The main layout Box. The flexbox structure remains the same.
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 64px)', // Assumes 64px navbar height
+        height: 'calc(100vh - 64px)',
         p: { xs: 2, sm: 3 },
         gap: 3,
       }}
