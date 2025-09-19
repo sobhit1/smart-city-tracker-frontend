@@ -130,10 +130,11 @@ function CitizenDashboard() {
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
+              sx={{minWidth: '20vw'}}
             />
           </Grid>
           <Grid item xs={6} md={3}>
-            <FormControl fullWidth sx={{ minWidth: 100 }}>
+            <FormControl fullWidth sx={{ minWidth: '15vw' }}>
               <InputLabel>Category</InputLabel>
               <Select name="category" value={filters.category} label="Category" onChange={handleFilterChange}>
                 {categories.map((cat) => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
@@ -141,7 +142,7 @@ function CitizenDashboard() {
             </FormControl>
           </Grid>
           <Grid item xs={6} md={3}>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{minWidth: '10vw'}}>
               <InputLabel>Status</InputLabel>
               <Select name="status" value={filters.status} label="Status" onChange={handleFilterChange}>
                 {statuses.map((stat) => <MenuItem key={stat} value={stat}>{stat}</MenuItem>)}
