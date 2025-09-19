@@ -2,8 +2,8 @@ import { createSlice } from '@reduxjs/toolkit';
 import { getUser, getToken, setUser, setToken, clearAuthStorage } from '../toolkit/storage';
 
 const initialState = {
-  user: getUser(), 
-  token: getToken(), 
+  user: getUser(),
+  token: getToken(),
   isAuthenticated: !!getToken(),
 };
 

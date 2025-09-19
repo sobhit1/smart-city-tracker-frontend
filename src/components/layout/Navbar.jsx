@@ -11,7 +11,6 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  Divider,
 } from '@mui/material';
 import Logout from '@mui/icons-material/Logout';
 

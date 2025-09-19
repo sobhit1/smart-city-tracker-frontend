@@ -1,7 +1,6 @@
 import apiClient from '../toolkit/apiClient';
 import { ISSUES_ENDPOINT } from '../const/api';
 
-// --- Mock Data (Updated with full details for the Issue Details page) ---
 const mockIssues = [
   {
     id: 'IS-101',
@@ -13,12 +12,12 @@ const mockIssues = [
     reporter: { id: 1, name: 'John Citizen' },
     assignee: null,
     attachments: [
-        { name: 'pothole-view.jpg', url: 'https://placehold.co/600x400/7f1d1d/ffffff?text=Pothole+View' },
-        { name: 'pothole-closeup.jpg', url: 'https://placehold.co/600x400/b91c1c/ffffff?text=Close-up' }
+      { name: 'pothole-view.jpg', url: 'https://placehold.co/600x400/7f1d1d/ffffff?text=Pothole+View' },
+      { name: 'pothole-closeup.jpg', url: 'https://placehold.co/600x400/b91c1c/ffffff?text=Close-up' }
     ],
     comments: [
-        { id: 1, author: { id: 3, name: 'Admin User' }, text: 'Thank you for reporting. We have dispatched a team to inspect the issue.', createdAt: '2025-09-18T11:00:00Z' },
-        { id: 2, author: { id: 1, name: 'John Citizen' }, text: 'Update: The pothole seems to have gotten larger after last night\'s rain.', createdAt: '2025-09-19T09:00:00Z' }
+      { id: 1, author: { id: 3, name: 'Admin User' }, text: 'Thank you for reporting. We have dispatched a team to inspect the issue.', createdAt: '2025-09-18T11:00:00Z' },
+      { id: 2, author: { id: 1, name: 'John Citizen' }, text: 'Update: The pothole seems to have gotten larger after last night\'s rain.', createdAt: '2025-09-19T09:00:00Z' }
     ]
   },
   {
@@ -44,7 +43,7 @@ const mockIssues = [
     assignee: { id: 3, name: 'Admin User' },
     attachments: [],
     comments: [
-        { id: 3, author: { id: 2, name: 'Jane Staff' }, text: 'Resolved. The bulb was replaced on Sept 16th.', createdAt: '2025-09-16T18:00:00Z' }
+      { id: 3, author: { id: 2, name: 'Jane Staff' }, text: 'Resolved. The bulb was replaced on Sept 16th.', createdAt: '2025-09-16T18:00:00Z' }
     ],
   },
   {
@@ -69,15 +68,12 @@ const mockIssues = [
     reporter: { id: 1, name: 'John Citizen' },
     assignee: { id: 2, name: 'Jane Staff' },
     attachments: [
-        { name: 'fallen-tree.jpg', url: 'https://placehold.co/600x400/22c55e/ffffff?text=Fallen+Tree' }
+      { name: 'fallen-tree.jpg', url: 'https://placehold.co/600x400/22c55e/ffffff?text=Fallen+Tree' }
     ],
     comments: []
   },
 ];
 
-/**
- * Fetches a list of all issues from the backend.
- */
 export const fetchIssues = async (filters = {}) => {
   console.log('Fetching issues with filters:', filters);
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -98,9 +94,6 @@ export const fetchIssues = async (filters = {}) => {
   return filteredIssues;
 };
 
-/**
- * Fetches a single issue by its ID from the backend.
- */
 export const fetchIssueById = async (issueId) => {
   console.log('Fetching issue with ID:', issueId);
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -111,7 +104,6 @@ export const fetchIssueById = async (issueId) => {
     throw new Error('Issue not found');
   }
 
-  // Ensure all issues have attachments/comments arrays for consistency.
   return {
     ...issue,
     attachments: issue.attachments || [],
@@ -119,9 +111,6 @@ export const fetchIssueById = async (issueId) => {
   };
 };
 
-/**
- * Submits a new issue to the backend.
- */
 export const createIssue = async (issueData) => {
   console.log('Submitting new issue:', issueData);
   await new Promise(resolve => setTimeout(resolve, 1000));

@@ -20,7 +20,7 @@ const muiTheme = createTheme({
       paper: '#282E33',
     },
     text: {
-      primary: '#E6EDF2', 
+      primary: '#E6EDF2',
       secondary: '#7D858D',
     },
     divider: '#373E47',

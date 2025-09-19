@@ -139,7 +139,7 @@ function Dashboard() {
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
-              sx={{minWidth: '20vw'}}
+              sx={{ minWidth: '20vw' }}
             />
           </Grid>
           <Grid item xs={6} md={3}>
@@ -151,7 +151,7 @@ function Dashboard() {
             </FormControl>
           </Grid>
           <Grid item xs={6} md={3}>
-            <FormControl fullWidth sx={{minWidth: '10vw'}}>
+            <FormControl fullWidth sx={{ minWidth: '10vw' }}>
               <InputLabel>Status</InputLabel>
               <Select name="status" value={filters.status} label="Status" onChange={handleFilterChange}>
                 {statuses.map((stat) => <MenuItem key={stat} value={stat}>{stat}</MenuItem>)}

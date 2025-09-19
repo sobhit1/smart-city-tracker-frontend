@@ -26,7 +26,6 @@ import {
   IconButton,
   FormHelperText,
 } from '@mui/material';
-import AddLocationAltIcon from '@mui/icons-material/AddLocationAlt';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ReportIcon from '@mui/icons-material/Report';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
@@ -146,9 +145,9 @@ function ReportIssue() {
             <Typography
               variant="h4"
               component="h1"
-              sx={{ 
-                fontWeight: 600, 
-                color: 'primary.main', 
+              sx={{
+                fontWeight: 600,
+                color: 'primary.main',
                 mb: 2,
                 fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' }
               }}
@@ -157,8 +156,8 @@ function ReportIssue() {
             </Typography>
             <Typography
               variant="body1"
-              sx={{ 
-                color: 'text.secondary', 
+              sx={{
+                color: 'text.secondary',
                 maxWidth: 700,
                 fontSize: { xs: '0.9rem', sm: '1rem' },
                 lineHeight: 1.6
@@ -199,10 +198,10 @@ function ReportIssue() {
                     >
                       <ReportIcon sx={{ color: 'white', fontSize: 22 }} />
                     </Box>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 600, 
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
                         color: 'text.primary',
                         fontSize: { xs: '1.1rem', sm: '1.25rem' }
                       }}
@@ -231,7 +230,7 @@ function ReportIssue() {
                               helperText={errors.title?.message}
                               required
                               sx={{
-                                minWidth: {xs: '60vw', md:'50vw'},
+                                minWidth: { xs: '60vw', md: '50vw' },
                                 '& .MuiOutlinedInput-root': {
                                   backgroundColor: '#1D2125',
                                   height: '56px',
@@ -256,7 +255,7 @@ function ReportIssue() {
                           fullWidth
                           error={!!errors.category}
                           required
-                          sx={{ 
+                          sx={{
                             minHeight: '56px',
                             '& .MuiInputLabel-root': {
                               fontSize: '1rem',
@@ -272,7 +271,7 @@ function ReportIssue() {
                                 {...field}
                                 label="Category"
                                 sx={{
-                                  minWidth: {xs: '60vw', md:'25vw'},
+                                  minWidth: { xs: '60vw', md: '25vw' },
                                   height: '56px',
                                   '&:hover .MuiOutlinedInput-notchedOutline': {
                                     borderColor: '#85B8FF',
@@ -293,8 +292,8 @@ function ReportIssue() {
                           />
                           {errors.category && (
                             <FormHelperText
-                              sx={{ 
-                                pl: 2, 
+                              sx={{
+                                pl: 2,
                                 pt: 1,
                                 fontSize: '0.875rem'
                               }}
@@ -322,7 +321,7 @@ function ReportIssue() {
                               helperText={errors.description?.message}
                               required
                               sx={{
-                                minWidth: {xs: '60vw', sm:'70vw', md: '80vw'},
+                                minWidth: { xs: '60vw', sm: '70vw', md: '80vw' },
                                 mt: 1,
                                 '& .MuiOutlinedInput-root': {
                                   backgroundColor: '#1D2125',
@@ -343,24 +342,24 @@ function ReportIssue() {
 
                       {/* Location Picker */}
                       <Grid item xs={12}>
-                        <Box sx={{ 
-                          minWidth: {xs: '60vw', md:'40vw'},
-                          border: 1, 
-                          borderColor: errors.location ? 'error.main' : 'divider', 
-                          borderRadius: 2, 
+                        <Box sx={{
+                          minWidth: { xs: '60vw', md: '40vw' },
+                          border: 1,
+                          borderColor: errors.location ? 'error.main' : 'divider',
+                          borderRadius: 2,
                           p: 2,
                         }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center', 
-                            mb: 2, 
-                            px: 1 
+                          <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 2,
+                            px: 1
                           }}>
-                            <Typography 
-                              variant="subtitle1" 
-                              component="label" 
-                              sx={{ 
+                            <Typography
+                              variant="subtitle1"
+                              component="label"
+                              sx={{
                                 fontWeight: 500,
                                 fontSize: '1rem',
                                 color: 'text.secondary'
@@ -368,11 +367,11 @@ function ReportIssue() {
                             >
                               Select Location*
                             </Typography>
-                            <Button 
-                              size="small" 
-                              startIcon={<MyLocationIcon />} 
+                            <Button
+                              size="small"
+                              startIcon={<MyLocationIcon />}
                               onClick={handleGetCurrentLocation}
-                              sx={{ 
+                              sx={{
                                 minHeight: '32px',
                                 fontSize: '0.875rem',
                                 fontWeight: 500
@@ -381,22 +380,22 @@ function ReportIssue() {
                               Use Current Location
                             </Button>
                           </Box>
-                          <Box sx={{ 
-                            height: 350, 
-                            borderRadius: 2, 
+                          <Box sx={{
+                            height: 350,
+                            borderRadius: 2,
                             overflow: 'hidden',
                             border: '1px solid',
                             borderColor: 'divider'
                           }}>
-                            <MapContainer 
-                              center={mapCenter} 
-                              zoom={15} 
-                              style={{ height: '100%', width: '100%' }} 
+                            <MapContainer
+                              center={mapCenter}
+                              zoom={15}
+                              style={{ height: '100%', width: '100%' }}
                               key={mapCenter.join(',')}
                             >
-                              <TileLayer 
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' 
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                               />
                               {selectedLocation && <Marker position={[selectedLocation.lat, selectedLocation.lng]} />}
                               <LocationPicker onLocationSelect={(latlng) => setValue('location', latlng, { shouldValidate: true })} />
@@ -412,16 +411,16 @@ function ReportIssue() {
 
                       {/* File Upload */}
                       <Grid item xs={12}>
-                        <Button 
-                          variant="outlined" 
-                          component="label" 
-                          startIcon={<AttachFileIcon />} 
-                          fullWidth 
-                          sx={{ 
-                            minWidth: {xs: '60vw', md:'38vw'},
-                            height: '64px', 
-                            borderStyle: 'dashed', 
-                            justifyContent: 'center', 
+                        <Button
+                          variant="outlined"
+                          component="label"
+                          startIcon={<AttachFileIcon />}
+                          fullWidth
+                          sx={{
+                            minWidth: { xs: '60vw', md: '38vw' },
+                            height: '64px',
+                            borderStyle: 'dashed',
+                            justifyContent: 'center',
                             borderColor: errors.files ? 'error.main' : 'divider',
                             fontSize: '1rem',
                             fontWeight: 500,
@@ -445,33 +444,33 @@ function ReportIssue() {
                             {selectedFiles.map((file, index) => (
                               <Grid item key={index}>
                                 <Box sx={{ position: 'relative' }}>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleRemoveFile(index)} 
-                                    sx={{ 
-                                      position: 'absolute', 
-                                      top: -8, 
-                                      right: -8, 
-                                      zIndex: 1, 
-                                      bgcolor: 'rgba(0,0,0,0.8)', 
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleRemoveFile(index)}
+                                    sx={{
+                                      position: 'absolute',
+                                      top: -8,
+                                      right: -8,
+                                      zIndex: 1,
+                                      bgcolor: 'rgba(0,0,0,0.8)',
                                       width: 24,
                                       height: 24,
-                                      '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' } 
+                                      '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' }
                                     }}
                                   >
                                     <CloseIcon fontSize="small" sx={{ color: 'white', fontSize: '16px' }} />
                                   </IconButton>
-                                  <Box 
-                                    component="img" 
-                                    src={URL.createObjectURL(file)} 
-                                    sx={{ 
-                                      height: 88, 
-                                      width: 88, 
-                                      objectFit: 'cover', 
+                                  <Box
+                                    component="img"
+                                    src={URL.createObjectURL(file)}
+                                    sx={{
+                                      height: 88,
+                                      width: 88,
+                                      objectFit: 'cover',
                                       borderRadius: 2,
                                       border: '1px solid',
                                       borderColor: 'divider'
-                                    }} 
+                                    }}
                                   />
                                 </Box>
                               </Grid>
@@ -556,9 +555,9 @@ function ReportIssue() {
                 <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                     <TipsAndUpdatesIcon sx={{ mr: 2, color: '#FAA53D', fontSize: '1.5rem' }} />
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
+                    <Typography
+                      variant="h6"
+                      sx={{
                         fontWeight: 600,
                         fontSize: { xs: '1.1rem', sm: '1.25rem' }
                       }}
@@ -568,10 +567,10 @@ function ReportIssue() {
                   </Box>
                   <List dense sx={{ p: 0 }}>
                     {tips.map((tip, index) => (
-                      <ListItem 
-                        key={index} 
-                        sx={{ 
-                          px: 0, 
+                      <ListItem
+                        key={index}
+                        sx={{
+                          px: 0,
                           py: 1.5,
                           alignItems: 'flex-start'
                         }}
@@ -585,7 +584,7 @@ function ReportIssue() {
                           primary={tip}
                           primaryTypographyProps={{
                             variant: 'body2',
-                            sx: { 
+                            sx: {
                               color: 'text.primary',
                               fontSize: '0.9rem',
                               lineHeight: 1.5
