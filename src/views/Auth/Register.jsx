@@ -22,7 +22,7 @@ import { setAuth } from '../../state/authSlice';
 import { showNotification } from '../../state/notificationSlice';
 import apiClient from '../../toolkit/apiClient';
 import { REGISTER_API } from '../../const/api';
-import { LOGIN_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
+import { LOGIN_PATH, DASHBOARD_PATH } from '../../const/routes';
 
 const schema = yup.object().shape({
     fullName: yup.string().required('Full Name is required'),
@@ -68,7 +68,7 @@ function Register() {
 
             dispatch(setAuth(response.data));
 
-            navigate(CITIZEN_DASHBOARD_PATH);
+            navigate(DASHBOARD_PATH);
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
             dispatch(showNotification({ message: errorMessage, severity: 'error' }));
@@ -97,7 +97,6 @@ function Register() {
                         Register
                     </Typography>
                     <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3, width: '100%' }}>
-
                         <TextField
                             margin="normal"
                             autoComplete="name"

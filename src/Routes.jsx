@@ -8,27 +8,19 @@ import MainLayout from './components/layout/MainLayout';
 import {
   LOGIN_PATH,
   REGISTER_PATH,
-  CITIZEN_DASHBOARD_PATH,
-  STAFF_DASHBOARD_PATH,
-  ADMIN_DASHBOARD_PATH,
+  DASHBOARD_PATH,
   REPORT_ISSUE_PATH,
 } from './const/routes';
 
 const Login = lazy(() => import('./views/Auth/Login'));
 const Register = lazy(() => import('./views/Auth/Register'));
-const CitizenDashboard = lazy(() => import('./views/Citizen/Dashboard'));
-const StaffDashboard = lazy(() => import('./views/Staff/Dashboard'));
-const AdminDashboard = lazy(() => import('./views/Admin/Dashboard'));
-const ReportIssue = lazy(() => import('./views/Citizen/ReportIssue'));
+const Dashboard = lazy(() => import('./views/dashboard/Dashboard'));
+const ReportIssue = lazy(() => import('./views/dashboard/ReportIssue'));
 
-function ProtectedRoute({ children, allowedRoles }) {
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   if (!isAuthenticated) {
-    return <Navigate to={LOGIN_PATH} replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.some((role) => user?.roles.includes(role))) {
     return <Navigate to={LOGIN_PATH} replace />;
   }
 
@@ -44,13 +36,13 @@ function AppRoutes() {
         <Route path={LOGIN_PATH} element={<Login />} />
         <Route path={REGISTER_PATH} element={<Register />} />
 
-        {/* --- Protected Routes --- */}
+        {/* --- Protected Routes (Now Simplified) --- */}
         <Route
-          path={CITIZEN_DASHBOARD_PATH}
+          path={DASHBOARD_PATH}
           element={
-            <ProtectedRoute allowedRoles={['ROLE_CITIZEN']}>
+            <ProtectedRoute>
               <MainLayout>
-                <CitizenDashboard />
+                <Dashboard />
               </MainLayout>
             </ProtectedRoute>
           }
@@ -58,29 +50,9 @@ function AppRoutes() {
         <Route
           path={REPORT_ISSUE_PATH}
           element={
-            <ProtectedRoute allowedRoles={['ROLE_CITIZEN']}>
+            <ProtectedRoute>
               <MainLayout>
                 <ReportIssue />
-              </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path={STAFF_DASHBOARD_PATH}
-          element={
-            <ProtectedRoute allowedRoles={['ROLE_STAFF']}>
-              <MainLayout>
-                <StaffDashboard />
-              </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path={ADMIN_DASHBOARD_PATH}
-          element={
-            <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
-              <MainLayout>
-                <AdminDashboard />
               </MainLayout>
             </ProtectedRoute>
           }
@@ -95,7 +67,6 @@ function AppRoutes() {
 
 ProtectedRoute.propTypes = {
   children: PropTypes.node.isRequired,
-  allowedRoles: PropTypes.arrayOf(PropTypes.string),
 };
 
 export default AppRoutes;

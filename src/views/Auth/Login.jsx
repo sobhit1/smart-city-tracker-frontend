@@ -22,7 +22,7 @@ import { setAuth } from '../../state/authSlice';
 import { showNotification } from '../../state/notificationSlice';
 import apiClient from '../../toolkit/apiClient';
 import { LOGIN_API } from '../../const/api';
-import { REGISTER_PATH, CITIZEN_DASHBOARD_PATH } from '../../const/routes';
+import { REGISTER_PATH, DASHBOARD_PATH } from '../../const/routes';
 
 const schema = yup.object().shape({
   userName: yup.string().required('Username is required'),
@@ -58,7 +58,7 @@ function Login() {
 
       dispatch(setAuth(response.data));
 
-      navigate(CITIZEN_DASHBOARD_PATH);
+      navigate(DASHBOARD_PATH);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
       dispatch(showNotification({ message: errorMessage, severity: 'error' }));
@@ -87,7 +87,6 @@ function Login() {
             Login
           </Typography>
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
-
             <TextField
               margin="normal"
               required
