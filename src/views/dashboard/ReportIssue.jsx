@@ -39,7 +39,7 @@ import 'leaflet/dist/leaflet.css';
 
 import { createIssue } from '../../api/issuesApi';
 import { showNotification } from '../../state/notificationSlice';
-import { CITIZEN_DASHBOARD_PATH } from '../../const/routes';
+import { DASHBOARD_PATH } from '../../const/routes';
 
 const categories = ['Roads', 'Waste Management', 'Streetlights', 'Water Supply', 'Parks & Trees', 'Other'];
 
@@ -120,7 +120,7 @@ function ReportIssue() {
     try {
       await createIssue(data);
       dispatch(showNotification({ message: 'Issue reported successfully!', severity: 'success' }));
-      navigate(CITIZEN_DASHBOARD_PATH);
+      navigate(DASHBOARD_PATH);
     } catch (error) {
       const errorMessage = error.message || 'Failed to report issue. Please try again.';
       dispatch(showNotification({ message: errorMessage, severity: 'error' }));
@@ -495,7 +495,7 @@ function ReportIssue() {
                           <Button
                             variant="outlined"
                             component={RouterLink}
-                            to={CITIZEN_DASHBOARD_PATH}
+                            to={DASHBOARD_PATH}
                             disabled={loading}
                             size="large"
                             sx={{

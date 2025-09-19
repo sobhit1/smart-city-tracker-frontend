@@ -58,16 +58,25 @@ const columns = [
     field: 'actions',
     headerName: 'Actions',
     width: 120,
-    renderCell: () => <Button variant="outlined" size="small">View</Button>,
     sortable: false,
     disableColumnMenu: true,
+    renderCell: (params) => (
+      <Button
+        variant="outlined"
+        size="small"
+        component={RouterLink}
+        to={`/issue/${params.row.id}`}
+      >
+        View
+      </Button>
+    ),
   },
 ];
 
 const categories = ['All', 'Roads', 'Waste Management', 'Streetlights', 'Water Supply', 'Parks & Trees', 'Other'];
 const statuses = ['All', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
 
-function CitizenDashboard() {
+function Dashboard() {
   const [filters, setFilters] = useState({
     search: '',
     category: 'All',
@@ -171,4 +180,4 @@ function CitizenDashboard() {
   );
 }
 
-export default CitizenDashboard;
+export default Dashboard;
