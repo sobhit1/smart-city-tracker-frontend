@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -17,7 +17,7 @@ import Logout from '@mui/icons-material/Logout';
 import { logout } from '../../state/authSlice';
 import apiClient from '../../toolkit/apiClient';
 import { LOGOUT_API } from '../../const/api';
-import { LOGIN_PATH } from '../../const/routes';
+import { LOGIN_PATH, DASHBOARD_PATH } from '../../const/routes';
 
 const getInitials = (name = '') => {
   const nameParts = name.split(' ');
@@ -55,12 +55,15 @@ function Navbar() {
   };
 
   return (
-    <AppBar position="static">
+    <AppBar position="sticky">
       <Toolbar>
-        {/* App Title */}
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Smart City Issue Tracker
-        </Typography>
+        <RouterLink to={DASHBOARD_PATH} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Smart City Issue Tracker
+          </Typography>
+        </RouterLink>
+
+        <Box sx={{ flexGrow: 1 }} />
 
         {/* User Menu Trigger */}
         <Box sx={{ display: 'flex', alignItems: 'center', textAlign: 'center' }}>
@@ -71,9 +74,6 @@ function Navbar() {
             onClick={handleClick}
             size="small"
             sx={{ ml: 2 }}
-            aria-controls={open ? 'account-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? 'true' : undefined}
           >
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
               {getInitials(user?.fullName)}
