@@ -132,7 +132,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: addCommentMutation, isPending: isAddingComment } = useMutation({
         mutationFn: addComment,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            queryClient.invalidateQueries(['issue', issueId]);
             dispatch(showNotification({ message: 'Comment added', severity: 'success' }));
             setNewComment('');
             setNewCommentFiles([]);
@@ -145,7 +145,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: updateCommentMutation } = useMutation({
         mutationFn: updateComment,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            queryClient.invalidateQueries(['issue', issueId]);
             dispatch(showNotification({ message: 'Comment updated', severity: 'success' }));
         },
         onError: (error) => {
@@ -156,7 +156,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: deleteCommentMutation, isPending: isDeletingComment } = useMutation({
         mutationFn: deleteComment,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            queryClient.invalidateQueries(['issue', issueId]);
             dispatch(showNotification({ message: 'Comment deleted', severity: 'success' }));
             setCommentToDelete(null);
         },
