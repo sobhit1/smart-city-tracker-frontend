@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -14,17 +14,10 @@ import {
 } from '@mui/material';
 import Logout from '@mui/icons-material/Logout';
 
+import { useLogout } from '../../api/authApi';
 import { logout } from '../../state/authSlice';
-import apiClient from '../../toolkit/apiClient';
-import { LOGOUT_API } from '../../const/api';
 import { LOGIN_PATH, DASHBOARD_PATH } from '../../const/routes';
-
-const getInitials = (name = '') => {
-  const nameParts = name.split(' ');
-  const firstNameInitial = nameParts[0] ? nameParts[0][0] : '';
-  const lastNameInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '';
-  return `${firstNameInitial}${lastNameInitial}`.toUpperCase();
-};
+import { showNotification } from '../../state/notificationSlice';
 
 function Navbar() {
   const dispatch = useDispatch();
@@ -34,6 +27,19 @@ function Navbar() {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
+  const { mutate: logoutMutation } = useLogout({
+    onSuccess: () => {
+      dispatch(logout());
+      navigate(LOGIN_PATH);
+    },
+    onError: (error) => {
+      console.error('Logout API call failed, proceeding with client-side logout.', error);
+      dispatch(logout());
+      navigate(LOGIN_PATH);
+      dispatch(showNotification({ message: 'Could not contact server, logged out locally.', severity: 'warning' }));
+    },
+  });
+
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -42,16 +48,9 @@ function Navbar() {
     setAnchorEl(null);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     handleClose();
-    try {
-      await apiClient.post(LOGOUT_API);
-    } catch (error) {
-      console.error('Logout API call failed, proceeding with client-side logout.', error);
-    } finally {
-      dispatch(logout());
-      navigate(LOGIN_PATH);
-    }
+    logoutMutation();
   };
 
   return (
@@ -70,13 +69,9 @@ function Navbar() {
           <Typography sx={{ minWidth: 100, display: { xs: 'none', sm: 'block' } }}>
             Hi, {user?.fullName.split(' ')[0]}
           </Typography>
-          <IconButton
-            onClick={handleClick}
-            size="small"
-            sx={{ ml: 2 }}
-          >
+          <IconButton onClick={handleClick} size="small" sx={{ ml: 2 }}>
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-              {getInitials(user?.fullName)}
+              {user?.fullName[0].toUpperCase() || '?'}
             </Avatar>
           </IconButton>
         </Box>

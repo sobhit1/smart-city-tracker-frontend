@@ -1,4 +1,4 @@
-// Base API URL
+// --- Base API URL ---
 export const BASE_API_URL = 'http://localhost:8080/api';
 
 // --- Authentication Endpoints ---
@@ -10,6 +10,11 @@ export const LOGOUT_API = `${AUTH_ENDPOINT}/logout`;
 
 // --- Issues Endpoints ---
 export const ISSUES_ENDPOINT = `${BASE_API_URL}/issues`;
-export const getIssueByIdUrl = (issueId) => `${ISSUES_ENDPOINT}/${issueId}`;
-export const getAssignIssueUrl = (issueId) => `${ISSUES_ENDPOINT}/${issueId}/assign`;
-export const getUploadProofUrl = (issueId) => `${ISSUES_ENDPOINT}/${issueId}/proofs`;
+
+// --- User Management Endpoints ---
+export const USERS_API = `${BASE_API_URL}/users`;
+
+// --- Lookup Data Endpoints (for dropdowns, filters, etc.) ---
+export const CATEGORIES_API = `${BASE_API_URL}/categories`;
+export const STATUSES_API = `${BASE_API_URL}/statuses`;
+export const PRIORITIES_API = `${BASE_API_URL}/priorities`;

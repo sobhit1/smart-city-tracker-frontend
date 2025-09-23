@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import  { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
@@ -11,6 +11,7 @@ import {
   DASHBOARD_PATH,
   REPORT_ISSUE_PATH,
   ISSUE_DETAILS_PATH,
+  MY_ISSUES_PATH,
 } from './const/routes';
 
 const Login = lazy(() => import('./views/Auth/Login'));
@@ -18,6 +19,7 @@ const Register = lazy(() => import('./views/Auth/Register'));
 const Dashboard = lazy(() => import('./views/dashboard/Dashboard'));
 const ReportIssue = lazy(() => import('./views/dashboard/ReportIssue'));
 const IssueDetails = lazy(() => import('./views/issues/IssueDetails'));
+const MyIssues = lazy(() => import('./views/dashboard/Dashboard'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -65,6 +67,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <IssueDetails />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={MY_ISSUES_PATH}
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <MyIssues />
               </MainLayout>
             </ProtectedRoute>
           }

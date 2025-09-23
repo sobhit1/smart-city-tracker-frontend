@@ -6,6 +6,9 @@ const initialState = {
   severity: 'info',
 };
 
+/**
+ * Redux slice for managing notifications.
+ */
 export const notificationSlice = createSlice({
   name: 'notifications',
   initialState,

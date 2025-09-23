@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
     Box,
@@ -19,14 +19,24 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
     const [isEditing, setIsEditing] = useState(false);
     const [dateValue, setDateValue] = useState(value || '');
 
+    useEffect(() => {
+        setDateValue(value || '');
+    }, [value]);
+
     const handleSave = () => {
         onChange(dateValue);
         setIsEditing(false);
     };
 
+    const handleCancel = () => {
+        setDateValue(value || '');
+        setIsEditing(false);
+    };
+
     const formatDisplayDate = (dateStr) => {
         if (!dateStr) return 'Not set';
-        const date = new Date(dateStr);
+        const parts = dateStr.split('-');
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
         return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -89,7 +99,7 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
                         </IconButton>
                         <IconButton
                             size="small"
-                            onClick={() => setIsEditing(false)}
+                            onClick={handleCancel}
                             sx={{
                                 backgroundColor: 'rgba(139, 148, 158, 0.1)',
                                 color: '#8B949E',

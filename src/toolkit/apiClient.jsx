@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_API_URL } from '../const/api';
+import { BASE_API_URL, REFRESH_TOKEN_API } from '../const/api';
 import { getToken, setToken, clearAuthStorage } from './storage';
 
 const apiClient = axios.create({
@@ -10,6 +10,7 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// --- Request Interceptor ---
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -21,6 +22,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// --- Response Interceptor ---
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,13 +31,9 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const res = await axios.post(
-          `${BASE_API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
+        const { data } = await apiClient.post(REFRESH_TOKEN_API);
 
-        const newAccessToken = res.data.accessToken;
+        const newAccessToken = data.accessToken;
         setToken(newAccessToken);
 
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -43,7 +41,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error('Refresh token expired or invalid. Redirecting to login...');
         clearAuthStorage();
-        window.location.href = '/login';
+        window.location.href = '/login'; 
         return Promise.reject(refreshError);
       }
     }

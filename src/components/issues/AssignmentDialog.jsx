@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
     Box,
@@ -15,7 +15,14 @@ import {
 } from '@mui/material';
 
 function AssignmentDialog({ open, onClose, onAssign, currentAssignee, availableUsers }) {
-    const [selectedUserId, setSelectedUserId] = useState(currentAssignee?.id || '');
+    const [selectedUserId, setSelectedUserId] = useState('');
+
+    useEffect(() => {
+        if (open) {
+            setSelectedUserId(currentAssignee?.id || '');
+        }
+    }, [open, currentAssignee]);
+
     return (
         <Dialog
             open={open}
@@ -33,7 +40,7 @@ function AssignmentDialog({ open, onClose, onAssign, currentAssignee, availableU
             <DialogTitle sx={{ borderBottom: '1px solid #373E47', pb: 2 }}>
                 Assign Issue
             </DialogTitle>
-            <DialogContent sx={{ pt: 3 }}>
+            <DialogContent sx={{ pt: '24px !important' }}>
                 <FormControl fullWidth>
                     <InputLabel sx={{ backgroundColor: '#1F2428', px: 1 }}>Assignee</InputLabel>
                     <Select

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useDispatch } from 'react-redux';
 import {
     Box,
     Typography,
@@ -10,6 +12,7 @@ import {
     IconButton,
     Dialog,
     DialogContent,
+    CircularProgress,
 } from '@mui/material';
 import {
     AttachFile as AttachFileIcon,
@@ -17,6 +20,8 @@ import {
     Close as CloseIcon,
 } from '@mui/icons-material';
 
+import { updateIssue, deleteAttachment, addAttachmentsToIssue } from '../../api/issuesApi';
+import { showNotification } from '../../state/notificationSlice';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
 function EditableField({ initialValue, onSave, canEdit, multiline = false, variant = "body1", placeholder }) {
@@ -70,31 +75,63 @@ EditableField.propTypes = {
 function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState('');
-    const [attachments, setAttachments] = useState(issue.attachments);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [attachmentToDelete, setAttachmentToDelete] = useState(null);
+    const queryClient = useQueryClient();
+    const dispatch = useDispatch();
 
-    const handleOpenLightbox = (imageUrl) => {
-        setSelectedImage(imageUrl);
-        setLightboxOpen(true);
+    const { mutate: updateIssueMutation } = useMutation({
+        mutationFn: updateIssue,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            dispatch(showNotification({ message: 'Issue updated successfully', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update issue', severity: 'error' }));
+        }
+    });
+
+    const { mutate: addAttachmentsMutation, isPending: isUploading } = useMutation({
+        mutationFn: addAttachmentsToIssue,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            dispatch(showNotification({ message: 'Attachment(s) added successfully', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to add attachment(s)', severity: 'error' }));
+        }
+    });
+
+    const { mutate: deleteAttachmentMutation, isPending: isDeleting } = useMutation({
+        mutationFn: deleteAttachment,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            dispatch(showNotification({ message: 'Attachment deleted successfully', severity: 'success' }));
+            setAttachmentToDelete(null);
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to delete attachment', severity: 'error' }));
+        }
+    });
+
+    const handleSaveField = (fieldName, value) => {
+        updateIssueMutation({ issueId: issue.id, updateData: { [fieldName]: value } });
     };
 
-    const handleCloseLightbox = () => {
-        setLightboxOpen(false);
-    };
-
-    const requestDeleteAttachment = (attachment) => {
-        setAttachmentToDelete(attachment);
-        setDeleteDialogOpen(true);
+    const handleFileChange = (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length > 0) {
+            addAttachmentsMutation({ issueId: issue.id, files });
+        }
     };
 
     const handleDeleteAttachment = () => {
         if (!attachmentToDelete) return;
+        deleteAttachmentMutation({ issueId: issue.id, attachmentId: attachmentToDelete.id });
+    };
 
-        setAttachments(prev => prev.filter(att => att !== attachmentToDelete));
-
-        setDeleteDialogOpen(false);
-        setAttachmentToDelete(null);
+    const handleOpenLightbox = (imageUrl) => {
+        setSelectedImage(imageUrl);
+        setLightboxOpen(true);
     };
 
     return (
@@ -103,7 +140,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                 {/* Title */}
                 <EditableField
                     initialValue={issue.title}
-                    onSave={(newTitle) => console.log('Title saved:', newTitle)}
+                    onSave={(newTitle) => handleSaveField('title', newTitle)}
                     canEdit={canEdit}
                     variant="h4"
                     placeholder="Enter issue title..."
@@ -114,7 +151,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     <Typography variant="h6" gutterBottom>Description</Typography>
                     <EditableField
                         initialValue={issue.description}
-                        onSave={(newDesc) => console.log('Description saved:', newDesc)}
+                        onSave={(newDesc) => handleSaveField('description', newDesc)}
                         canEdit={canEdit}
                         multiline
                         placeholder="Add a description..."
@@ -125,38 +162,21 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                 <Box>
                     <Typography variant="h6" gutterBottom>Attachments</Typography>
                     <Grid container spacing={2}>
-                        {attachments.map((att, index) => (
-                            <Grid item key={index}>
+                        {issue.attachments.map((att) => (
+                            <Grid item key={att.id}>
                                 <Box sx={{ position: 'relative' }}>
                                     <Box
                                         component="img"
                                         src={att.url}
-                                        alt={att.name}
-                                        sx={{
-                                            width: 120,
-                                            height: 120,
-                                            objectFit: 'cover',
-                                            borderRadius: 1,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                opacity: 0.8
-                                            }
-                                        }}
+                                        alt={att.fileName}
+                                        sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                                         onClick={() => handleOpenLightbox(att.url)}
                                     />
                                     {canDeleteAttachments && (
                                         <IconButton
                                             size="small"
-                                            onClick={() => requestDeleteAttachment(att)}
-                                            sx={{
-                                                position: 'absolute',
-                                                top: 4,
-                                                right: 4,
-                                                bgcolor: 'rgba(0, 0, 0, 0.6)',
-                                                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' },
-                                            }}
+                                            onClick={() => setAttachmentToDelete(att)}
+                                            sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0, 0, 0, 0.6)', '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' } }}
                                         >
                                             <CloseIcon fontSize="small" sx={{ color: 'white' }} />
                                         </IconButton>
@@ -166,9 +186,14 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                         ))}
                         {canUploadProof && (
                             <Grid item>
-                                <Button variant="outlined" component="label" sx={{ width: 120, height: 120, borderStyle: 'dashed' }}>
-                                    <AttachFileIcon />
-                                    <input type="file" hidden multiple />
+                                <Button
+                                    variant="outlined"
+                                    component="label"
+                                    disabled={isUploading}
+                                    sx={{ width: 120, height: 120, borderStyle: 'dashed' }}
+                                >
+                                    {isUploading ? <CircularProgress size={24} /> : <AttachFileIcon />}
+                                    <input type="file" hidden multiple onChange={handleFileChange} />
                                 </Button>
                             </Grid>
                         )}
@@ -177,40 +202,25 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
             </Paper>
 
             {/* Lightbox Dialog component */}
-            <Dialog
-                open={lightboxOpen}
-                onClose={handleCloseLightbox}
-                maxWidth="lg"
-                PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none' } }}
-            >
-                <IconButton
-                    onClick={handleCloseLightbox}
-                    sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        color: 'white',
-                        bgcolor: 'rgba(0, 0, 0, 0.5)',
-                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
-                    }}
-                >
+            <Dialog open={lightboxOpen} onClose={() => setLightboxOpen(false)} maxWidth="lg" PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none' } }}>
+                <IconButton onClick={() => setLightboxOpen(false)} sx={{ position: 'absolute', top: 8, right: 8, color: 'white', bgcolor: 'rgba(0, 0, 0, 0.5)', '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' } }}>
                     <CloseIcon />
                 </IconButton>
                 <DialogContent sx={{ p: 0 }}>
-                    <img
-                        src={selectedImage}
-                        alt="Full screen attachment"
-                        style={{ maxWidth: '100%', maxHeight: '90vh', display: 'block' }}
-                    />
+                    <img src={selectedImage} alt="Full screen attachment" style={{ maxWidth: '100%', maxHeight: '90vh', display: 'block' }} />
                 </DialogContent>
             </Dialog>
 
-            <DeleteConfirmationDialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                onConfirm={handleDeleteAttachment}
-                item="Attachment"
-            />
+            {/* Delete Confirmation Dialog */}
+            {attachmentToDelete && (
+                <DeleteConfirmationDialog
+                    open={!!attachmentToDelete}
+                    onClose={() => setAttachmentToDelete(null)}
+                    onConfirm={handleDeleteAttachment}
+                    item={`attachment "${attachmentToDelete.fileName}"`}
+                    isDeleting={isDeleting}
+                />
+            )}
         </>
     );
 }

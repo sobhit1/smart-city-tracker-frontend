@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Box,
@@ -20,10 +20,47 @@ import { Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 
 import { useIssues } from '../../hooks/useIssues';
+import { useCategories, useStatuses } from '../../hooks/useLookups';
 import { REPORT_ISSUE_PATH } from '../../const/routes';
 
-const categories = ['All', 'Roads', 'Waste Management', 'Streetlights', 'Water Supply', 'Parks & Trees', 'Other'];
-const statuses = ['All', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
+const columns = [
+  { field: 'id', headerName: 'ID', width: 100 },
+  { field: 'title', headerName: 'Title', flex: 1, minWidth: 250 },
+  { field: 'category', headerName: 'Category', width: 180 },
+  { field: 'priority', headerName: 'Priority', width: 120, renderCell: (params) => {
+      const priorityColors = { Highest: 'error', High: 'error', Medium: 'warning', Low: 'success', Lowest: 'info' };
+      return <Chip label={params.value || 'N/A'} color={priorityColors[params.value] || 'default'} size="small" />;
+  }},
+  { field: 'reporter', headerName: 'Reported By', width: 150, valueGetter: (value) => value?.name || 'N/A' },
+  { field: 'assignee', headerName: 'Assigned To', width: 150, valueGetter: (value) => value?.name || 'Unassigned' },
+  {
+    field: 'status',
+    headerName: 'Status',
+    width: 150,
+    renderCell: (params) => {
+      const statusColors = { OPEN: 'error', IN_PROGRESS: 'primary', RESOLVED: 'success' };
+      return <Chip label={params.value} color={statusColors[params.value] || 'default'} size="small" />;
+    },
+  },
+  {
+    field: 'reportedAt',
+    headerName: 'Date Reported',
+    width: 180,
+    valueFormatter: (value) => new Date(value).toLocaleString(),
+  },
+  {
+    field: 'actions',
+    headerName: 'Actions',
+    width: 120,
+    sortable: false,
+    disableColumnMenu: true,
+    renderCell: (params) => (
+      <Button variant="outlined" size="small" component={RouterLink} to={`/issue/${params.row.id}`}>
+        View
+      </Button>
+    ),
+  },
+];
 
 function Dashboard() {
   const { user } = useSelector((state) => state.auth);
@@ -38,60 +75,28 @@ function Dashboard() {
     pageSize: 10,
   });
 
+  // --- Data Fetching ---
   const { data, isLoading, isError, error } = useIssues(filters, paginationModel);
+  const { data: categoriesData } = useCategories();
+  const { data: statusesData } = useStatuses();
+  
   const issues = data?.content || [];
   const rowCount = data?.totalElements || 0;
 
+  const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
+  const statuses = ['All', ...(statusesData?.map(s => s.name) || [])];
+  
   const isStaffOrAdmin = user?.roles.includes('ROLE_STAFF') || user?.roles.includes('ROLE_ADMIN');
 
   const handleFilterChange = (event, newView) => {
-    if (newView !== null) {
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+    if (newView !== undefined && newView !== null) {
       setFilters(prev => ({ ...prev, view: newView }));
     } else {
       const { name, value } = event.target;
       setFilters(prev => ({ ...prev, [name]: value }));
     }
   };
-
-  const columns = useMemo(() => [
-    { field: 'id', headerName: 'ID', width: 100 },
-    { field: 'title', headerName: 'Title', flex: 1, minWidth: 250 },
-    { field: 'category', headerName: 'Category', width: 180 },
-    { field: 'priority', headerName: 'Priority', width: 120, renderCell: (params) => {
-        const priorityColors = { highest : 'error', High: 'error', Medium: 'warning', Low: 'success' };
-        return <Chip label={params.value} color={priorityColors[params.value] || 'default'} size="small" />;
-    }},
-    { field: 'reporter', headerName: 'Reported By', width: 150, valueGetter: (value) => value?.name || 'N/A' },
-    { field: 'assignee', headerName: 'Assigned To', width: 150, valueGetter: (value) => value?.name || 'Unassigned' },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 150,
-      renderCell: (params) => {
-        const statusColors = { OPEN: 'error', IN_PROGRESS: 'primary', RESOLVED: 'success' };
-        return <Chip label={params.value} color={statusColors[params.value] || 'default'} size="small" />;
-      },
-    },
-    {
-      field: 'reportedAt',
-      headerName: 'Date Reported',
-      width: 180,
-      valueFormatter: (value) => new Date(value).toLocaleString(),
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      disableColumnMenu: true,
-      renderCell: (params) => (
-        <Button variant="outlined" size="small" component={RouterLink} to={`/issue/${params.row.id}`}>
-          View
-        </Button>
-      ),
-    },
-  ], []);
-
 
   if (isError) {
     return <Typography color="error">Error fetching issues: {error.message}</Typography>;
@@ -109,7 +114,6 @@ function Dashboard() {
       {/* --- Filter Bar --- */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          {/* NEW: Toggle Buttons for views */}
           <Grid item xs={12}>
             <ToggleButtonGroup
               value={filters.view}

@@ -6,15 +6,20 @@ import {
     DialogContent,
     DialogActions,
     Button,
-    Fade
+    Fade,
+    CircularProgress,
 } from '@mui/material';
 import { ErrorOutline } from '@mui/icons-material';
 
-function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
+function DeleteConfirmationDialog({ open, onClose, onConfirm, item, isDeleting }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(event, reason) => {
+                if (reason !== 'backdropClick' && reason !== 'escapeKeyDown') {
+                    onClose();
+                }
+            }}
             maxWidth="xs"
             fullWidth
             TransitionComponent={Fade}
@@ -45,22 +50,12 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
             <DialogContent sx={{ pt: 1.5, pb: 1 }}>
                 <Typography
                     color="text.primary"
-                    sx={{
-                        fontSize: '15px',
-                        lineHeight: 2,
-                        marginLeft: 4
-                    }}
+                    sx={{ fontSize: '15px', lineHeight: 2, marginLeft: 4 }}
                 >
-                    Are you sure you want to delete ?
+                    Are you sure you want to delete this {item.toLowerCase()}?
                 </Typography>
                 <Typography
-                    sx={{
-                        mt: 1.5,
-                        color: '#8B949E',
-                        fontSize: '14px',
-                        lineHeight: 2,
-                        marginLeft: 4
-                    }}
+                    sx={{ mt: 1.5, color: '#8B949E', fontSize: '14px', lineHeight: 2, marginLeft: 4 }}
                 >
                     This action <strong>cannot</strong> be undone.
                 </Typography>
@@ -70,6 +65,7 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
                 <Button
                     onClick={onClose}
                     variant="outlined"
+                    disabled={isDeleting}
                     sx={{
                         color: '#8B949E',
                         borderColor: '#30363d',
@@ -78,10 +74,7 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
                         fontSize: '14px',
                         px: 2,
                         py: 0.5,
-                        '&:hover': {
-                            backgroundColor: 'rgba(139, 148, 158, 0.1)',
-                            borderColor: '#444c56'
-                        }
+                        '&:hover': { backgroundColor: 'rgba(139, 148, 158, 0.1)', borderColor: '#444c56' }
                     }}
                 >
                     Cancel
@@ -90,6 +83,7 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
                     onClick={onConfirm}
                     variant="contained"
                     color="error"
+                    disabled={isDeleting}
                     sx={{
                         textTransform: 'none',
                         fontWeight: 600,
@@ -97,12 +91,10 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item }) {
                         px: 2.5,
                         py: 0.6,
                         boxShadow: 'none',
-                        '&:hover': {
-                            boxShadow: '0 3px 12px rgba(248, 81, 73, 0.35)'
-                        }
+                        '&:hover': { boxShadow: '0 3px 12px rgba(248, 81, 73, 0.35)' }
                     }}
                 >
-                    Delete
+                    {isDeleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
                 </Button>
             </DialogActions>
         </Dialog>
@@ -113,7 +105,8 @@ DeleteConfirmationDialog.propTypes = {
     open: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
     onConfirm: PropTypes.func.isRequired,
-    issueTitle: PropTypes.string.isRequired,
+    item: PropTypes.string.isRequired,
+    isDeleting: PropTypes.bool,
 };
 
 export default DeleteConfirmationDialog;

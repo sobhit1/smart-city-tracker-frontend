@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useDispatch } from 'react-redux';
 import {
     Box,
     Typography,
@@ -23,9 +25,11 @@ import {
     Close as CloseIcon,
 } from '@mui/icons-material';
 
+import { addComment, updateComment, deleteComment } from '../../api/issuesApi';
+import { showNotification } from '../../state/notificationSlice';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
-function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onReply }) {
+function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, onReply }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(comment.text);
     const [anchorEl, setAnchorEl] = useState(null);
@@ -35,13 +39,13 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onReply })
     const canDeleteComment = canDeleteAnyComment || canEditComment;
 
     const handleSave = () => {
-        onEdit(comment.id, editText);
+        onEdit({ text: editText });
         setIsEditing(false);
     };
 
     return (
         <Box sx={{ display: 'flex', gap: 2, py: 2 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.dark' }}>{comment.author.name[0]}</Avatar>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.dark' }}>{comment.author.name[0].toUpperCase()}</Avatar>
             <Box sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -98,13 +102,7 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onReply })
                         </MenuItem>
                     )}
                     {canDeleteComment && (
-                        <MenuItem
-                            onClick={() => {
-                                setAnchorEl(null);
-                                comment.onRequestDelete(comment.id);
-                            }}
-                            sx={{ color: 'error.main' }}
-                        >
+                        <MenuItem onClick={() => { setAnchorEl(null); onDelete(); }} sx={{ color: 'error.main' }}>
                             <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>Delete
                         </MenuItem>
                     )}
@@ -123,45 +121,54 @@ Comment.propTypes = {
     onReply: PropTypes.func.isRequired,
 };
 
-function CommentsSection({ issueComments, currentUser, canDeleteAnyComment }) {
-    const [comments, setComments] = useState(issueComments);
+function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComment }) {
     const [newComment, setNewComment] = useState('');
     const [newCommentFiles, setNewCommentFiles] = useState([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState(null);
     const commentInputRef = useRef(null);
+    const dispatch = useDispatch();
+    const queryClient = useQueryClient();
 
-    const handleAddComment = async () => {
+    const { mutate: addCommentMutation, isPending: isAddingComment } = useMutation({
+        mutationFn: addComment,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            dispatch(showNotification({ message: 'Comment added', severity: 'success' }));
+            setNewComment('');
+            setNewCommentFiles([]);
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to add comment', severity: 'error' }));
+        }
+    });
+
+    const { mutate: updateCommentMutation } = useMutation({
+        mutationFn: updateComment,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            dispatch(showNotification({ message: 'Comment updated', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update comment', severity: 'error' }));
+        }
+    });
+
+    const { mutate: deleteCommentMutation, isPending: isDeletingComment } = useMutation({
+        mutationFn: deleteComment,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issueId] });
+            dispatch(showNotification({ message: 'Comment deleted', severity: 'success' }));
+            setCommentToDelete(null);
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to delete comment', severity: 'error' }));
+        }
+    });
+    
+    const handleAddComment = () => {
         if (newComment.trim() === '') return;
-        setIsSubmitting(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const newCommentObject = {
-            id: Math.random(),
-            author: { id: currentUser.id, name: currentUser.fullName },
-            text: newComment,
-            attachments: newCommentFiles,
-            createdAt: new Date().toISOString(),
-        };
-        setComments([...comments, newCommentObject]);
-        setNewComment('');
-        setNewCommentFiles([]);
-        setIsSubmitting(false);
-    };
-
-    const handleEditComment = async (commentId, newText) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setComments(comments.map(c => c.id === commentId ? { ...c, text: newText } : c));
-    };
-
-    const handleDeleteComment = async (commentId) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setComments(comments.filter(c => c.id !== commentId));
-    };
-
-    const requestDeleteComment = (commentId) => {
-        setCommentToDelete(commentId);
-        setDeleteDialogOpen(true);
+        const commentData = { text: newComment };
+        addCommentMutation({ issueId, commentData, files: newCommentFiles });
     };
 
     const handleReply = (authorName) => {
@@ -194,45 +201,23 @@ function CommentsSection({ issueComments, currentUser, canDeleteAnyComment }) {
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         inputRef={commentInputRef}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderBottomLeftRadius: 0,
-                                borderBottomRightRadius: 0,
-                            },
-                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 } }}
                     />
-                    {/* Toolbar for the comment box */}
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            p: 1,
-                            border: 1,
-                            borderColor: 'divider',
-                            borderTop: 0,
-                            borderBottomLeftRadius: (theme) => theme.shape.borderRadius,
-                            borderBottomRightRadius: (theme) => theme.shape.borderRadius,
-                            bgcolor: 'background.paper',
-                        }}
-                    >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, border: 1, borderColor: 'divider', borderTop: 0, borderBottomLeftRadius: (theme) => theme.shape.borderRadius, borderBottomRightRadius: (theme) => theme.shape.borderRadius, bgcolor: 'background.paper' }}>
                         <IconButton size="small" component="label" aria-label="attach file">
                             <AttachFileIcon fontSize="small" />
                             <input type="file" hidden multiple onChange={handleFileChange} />
                         </IconButton>
                         <Stack direction="row" spacing={1}>
-                            {/* The "Cancel" button is now visible if there is text */}
-                            {newComment.trim() !== '' && (
-                                <Button variant="text" onClick={() => { setNewComment(''); setNewCommentFiles([]); }}>
-                                    Cancel
-                                </Button>
+                            {(newComment.trim() !== '' || newCommentFiles.length > 0) && (
+                                <Button variant="text" onClick={() => { setNewComment(''); setNewCommentFiles([]); }}>Cancel</Button>
                             )}
                             <Button
                                 variant="contained"
                                 onClick={handleAddComment}
-                                disabled={isSubmitting || newComment.trim() === ''}
+                                disabled={isAddingComment || newComment.trim() === ''}
                             >
-                                {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Save'}
+                                {isAddingComment ? <CircularProgress size={24} color="inherit" /> : 'Save'}
                             </Button>
                         </Stack>
                     </Box>
@@ -256,34 +241,34 @@ function CommentsSection({ issueComments, currentUser, canDeleteAnyComment }) {
 
             {/* List of Existing Comments */}
             <Box>
-                {comments.map((comment) => (
+                {issueComments.map((comment) => (
                     <Comment
                         key={comment.id}
-                        comment={{ ...comment, onRequestDelete: requestDeleteComment }}
+                        comment={comment}
                         currentUser={currentUser}
                         canDeleteAnyComment={canDeleteAnyComment}
-                        onEdit={handleEditComment}
-                        onDelete={handleDeleteComment}
+                        onEdit={(updateData) => updateCommentMutation({ issueId, commentId: comment.id, ...updateData })}
+                        onDelete={() => setCommentToDelete(comment)}
                         onReply={handleReply}
                     />
                 ))}
             </Box>
 
-            <DeleteConfirmationDialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                onConfirm={() => {
-                    handleDeleteComment(commentToDelete);
-                    setDeleteDialogOpen(false);
-                    setCommentToDelete(null);
-                }}
-                item="Comment"
-            />
+            {commentToDelete && (
+                <DeleteConfirmationDialog
+                    open={!!commentToDelete}
+                    onClose={() => setCommentToDelete(null)}
+                    onConfirm={() => deleteCommentMutation({ issueId, commentId: commentToDelete.id })}
+                    item={`comment by ${commentToDelete.author.name}`}
+                    isDeleting={isDeletingComment}
+                />
+            )}
         </Box>
     );
 }
 
 CommentsSection.propTypes = {
+    issueId: PropTypes.number.isRequired,
     issueComments: PropTypes.array.isRequired,
     currentUser: PropTypes.object.isRequired,
     canDeleteAnyComment: PropTypes.bool.isRequired,

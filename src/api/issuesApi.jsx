@@ -1,118 +1,134 @@
 import apiClient from '../toolkit/apiClient';
 import { ISSUES_ENDPOINT } from '../const/api';
 
-const mockIssues = [
-  {
-    id: 'IS-101',
-    title: 'Large pothole on Main Street near the central library',
-    description: 'There is a large and dangerous pothole on the westbound lane of Main Street, right in front of the public library entrance.\n\nIt has been there for over a week and is getting worse. Multiple cars have been seen swerving to avoid it.',
-    category: 'Roads',
-    status: 'OPEN',
-    reportedAt: '2025-09-18T10:30:00Z',
-    reporter: { id: 1, name: 'John Citizen' },
-    assignee: null,
-    attachments: [
-      { name: 'pothole-view.jpg', url: 'https://placehold.co/600x400/7f1d1d/ffffff?text=Pothole+View' },
-      { name: 'pothole-closeup.jpg', url: 'https://placehold.co/600x400/b91c1c/ffffff?text=Close-up' }
-    ],
-    comments: [
-      { id: 1, author: { id: 3, name: 'Admin User' }, text: 'Thank you for reporting. We have dispatched a team to inspect the issue.', createdAt: '2025-09-18T11:00:00Z' },
-      { id: 2, author: { id: 1, name: 'John Citizen' }, text: 'Update: The pothole seems to have gotten larger after last night\'s rain.', createdAt: '2025-09-19T09:00:00Z' }
-    ]
-  },
-  {
-    id: 'IS-102',
-    title: 'Garbage bins overflowing at City Park entrance',
-    description: 'The garbage and recycling bins at the main entrance to City Park are completely full and overflowing. This has been the case for two days now and is attracting pests.',
-    category: 'Waste Management',
-    status: 'IN_PROGRESS',
-    reportedAt: '2025-09-17T14:00:00Z',
-    reporter: { id: 2, name: 'Jane Staff' },
-    assignee: { id: 2, name: 'Jane Staff' },
-    attachments: [],
-    comments: [],
-  },
-  {
-    id: 'IS-103',
-    title: 'Streetlight out on Oak Avenue (Pole #A45)',
-    description: 'The streetlight on pole #A45 on Oak Avenue is completely out. It makes the corner very dark and unsafe at night.',
-    category: 'Streetlights',
-    status: 'RESOLVED',
-    reportedAt: '2025-09-15T22:15:00Z',
-    reporter: { id: 1, name: 'John Citizen' },
-    assignee: { id: 3, name: 'Admin User' },
-    attachments: [],
-    comments: [
-      { id: 3, author: { id: 2, name: 'Jane Staff' }, text: 'Resolved. The bulb was replaced on Sept 16th.', createdAt: '2025-09-16T18:00:00Z' }
-    ],
-  },
-  {
-    id: 'IS-104',
-    title: 'Broken water pipe causing a leak on Elm Street',
-    description: 'A water main appears to have burst on Elm Street. Water has been flowing down the gutter for several hours.',
-    category: 'Water Supply',
-    status: 'OPEN',
-    reportedAt: '2025-09-19T08:00:00Z',
-    reporter: { id: 4, name: 'Another Citizen' },
-    assignee: null,
-    attachments: [],
-    comments: []
-  },
-  {
-    id: 'IS-105',
-    title: 'Fallen tree blocking the sidewalk on Pine Lane',
-    description: 'A large branch from a tree has fallen and is completely blocking the sidewalk on Pine Lane, forcing pedestrians to walk in the street.',
-    category: 'Parks & Trees',
-    status: 'IN_PROGRESS',
-    reportedAt: '2025-09-18T18:45:00Z',
-    reporter: { id: 1, name: 'John Citizen' },
-    assignee: { id: 2, name: 'Jane Staff' },
-    attachments: [
-      { name: 'fallen-tree.jpg', url: 'https://placehold.co/600x400/22c55e/ffffff?text=Fallen+Tree' }
-    ],
-    comments: []
-  },
-];
+// --- READ / FETCH APIs ---
 
-export const fetchIssues = async (filters = {}) => {
-  console.log('Fetching issues with filters:', filters);
-  await new Promise(resolve => setTimeout(resolve, 500));
+/**
+ * Fetches a paginated and filtered list of issues from the live backend.
+ * @param {object} queryKey - An object from React Query containing the query key.
+ * The key is expected to be ['issues', filters, paginationModel].
+ */
+export const fetchIssues = async ({ queryKey }) => {
+  const [_key, filters, paginationModel] = queryKey;
 
-  let filteredIssues = mockIssues;
-  if (filters.search) {
-    filteredIssues = filteredIssues.filter(issue =>
-      issue.title.toLowerCase().includes(filters.search.toLowerCase())
-    );
-  }
-  if (filters.category && filters.category !== 'All') {
-    filteredIssues = filteredIssues.filter(issue => issue.category === filters.category);
-  }
-  if (filters.status && filters.status !== 'All') {
-    filteredIssues = filteredIssues.filter(issue => issue.status === filters.status);
-  }
-
-  return filteredIssues;
-};
-
-export const fetchIssueById = async (issueId) => {
-  console.log('Fetching issue with ID:', issueId);
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const issue = mockIssues.find(iss => iss.id === issueId);
-
-  if (!issue) {
-    throw new Error('Issue not found');
-  }
-
-  return {
-    ...issue,
-    attachments: issue.attachments || [],
-    comments: issue.comments || [],
+  const params = {
+    page: paginationModel.page,
+    size: paginationModel.pageSize,
+    search: filters.search || null,
+    category: filters.category === 'All' ? null : filters.category,
+    status: filters.status === 'All' ? null : filters.status,
+    reportedBy: filters.view === 'reportedByMe' ? 'me' : null,
+    assignedTo: filters.view === 'assignedToMe' ? 'me' : null,
   };
+
+  Object.keys(params).forEach(key => (params[key] == null) && delete params[key]);
+
+  const response = await apiClient.get(ISSUES_ENDPOINT, { params });
+  return response.data;
 };
 
+/**
+ * Fetches a single issue by its ID from the live backend.
+ */
+export const fetchIssueById = async (issueId) => {
+  if (!issueId) return null;
+  const response = await apiClient.get(`${ISSUES_ENDPOINT}/${issueId}`);
+  return response.data;
+};
+
+
+// --- CREATE / UPDATE / DELETE (MUTATION) APIs ---
+
+/**
+ * Creates a new issue by sending multipart data to the backend.
+ */
 export const createIssue = async (issueData) => {
-  console.log('Submitting new issue:', issueData);
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return { message: 'Issue created successfully' };
+  const formData = new FormData();
+
+  const issueJson = JSON.stringify({
+    title: issueData.title,
+    description: issueData.description,
+    category: issueData.category,
+    latitude: issueData.location.lat,
+    longitude: issueData.location.lng,
+  });
+  formData.append('issueData', new Blob([issueJson], { type: 'application/json' }));
+
+  issueData.files.forEach(file => {
+    formData.append('files', file);
+  });
+
+  const response = await apiClient.post(ISSUES_ENDPOINT, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/**
+ * Updates an existing issue.
+ */
+export const updateIssue = async ({ issueId, updateData }) => {
+  const response = await apiClient.put(`${ISSUES_ENDPOINT}/${issueId}`, updateData);
+  return response.data;
+};
+
+/**
+ * Deletes an issue.
+ */
+export const deleteIssue = async (issueId) => {
+  const response = await apiClient.delete(`${ISSUES_ENDPOINT}/${issueId}`);
+  return response.data;
+};
+
+/**
+ * Adds a comment to an issue.
+ */
+export const addComment = async ({ issueId, commentData, files }) => {
+  const formData = new FormData();
+  formData.append('commentData', new Blob([JSON.stringify(commentData)], { type: 'application/json' }));
+
+  if (files && files.length > 0) {
+    files.forEach(file => formData.append('files', file));
+  }
+
+  const response = await apiClient.post(`${ISSUES_ENDPOINT}/${issueId}/comments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/**
+ * Updates an existing comment.
+ */
+export const updateComment = async ({ issueId, commentId, text }) => {
+  const response = await apiClient.put(`${ISSUES_ENDPOINT}/${issueId}/comments/${commentId}`, { text });
+  return response.data;
+};
+
+/**
+ * Deletes a comment.
+ */
+export const deleteComment = async ({ issueId, commentId }) => {
+  const response = await apiClient.delete(`${ISSUES_ENDPOINT}/${issueId}/comments/${commentId}`);
+  return response.data;
+};
+
+/**
+ * Adds attachments to an existing issue.
+ */
+export const addAttachmentsToIssue = async ({ issueId, files }) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('files', file));
+  const response = await apiClient.post(`${ISSUES_ENDPOINT}/${issueId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/**
+ * Deletes an attachment.
+ */
+export const deleteAttachment = async ({ issueId, attachmentId }) => {
+  const response = await apiClient.delete(`${ISSUES_ENDPOINT}/${issueId}/attachments/${attachmentId}`);
+  return response.data;
 };

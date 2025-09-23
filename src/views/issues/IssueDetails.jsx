@@ -16,17 +16,14 @@ function IssueDetails() {
     const { user } = useSelector((state) => state.auth);
     const { data: issue, isLoading, isError, error } = useIssue(issueId);
 
-    const isAdmin = user?.roles.includes('ROLE_ADMIN');
-    const isStaff = user?.roles.includes('ROLE_STAFF');
-    const currentUserId = {
-        'John Citizen': 1,
-        'Jane Staff': 2,
-        'Admin User': 3,
-    }[user?.fullName] || 0;
+    const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+    const isStaff = user?.roles?.includes('ROLE_STAFF');
 
     if (isLoading) return <Loader />;
     if (isError) return <Typography color="error">Error fetching issue: {error.message}</Typography>;
     if (!issue) return <Typography>Issue not found.</Typography>;
+
+    const currentUserId = user?.id;
 
     const canEditIssue = isAdmin || (isStaff && issue.assignee?.id === currentUserId) || (issue.reporter.id === currentUserId);
     const canChangeStatus = isAdmin || (isStaff && issue.assignee?.id === currentUserId);
@@ -70,6 +67,7 @@ function IssueDetails() {
                         canDeleteAttachments={canDeleteAttachments}
                     />
                     <CommentsSection
+                        issueId={issue.id}
                         issueComments={issue.comments}
                         currentUser={currentUser}
                         canDeleteAnyComment={canDeleteAnyComment}
@@ -89,6 +87,7 @@ function IssueDetails() {
                         canChangeStatus={canChangeStatus}
                         canAssignIssue={canAssignIssue}
                         canDeleteIssue={canDeleteIssue}
+                        isAdmin={isAdmin}
                     />
                 </Box>
             </Box>

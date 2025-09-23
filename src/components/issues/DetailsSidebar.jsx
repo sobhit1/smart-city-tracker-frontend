@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -15,6 +18,10 @@ import {
     Delete as DeleteIcon,
 } from '@mui/icons-material';
 
+import { updateIssue, deleteIssue } from '../../api/issuesApi';
+import { useUsers, useStatuses, usePriorities } from '../../hooks/useLookups';
+import { showNotification } from '../../state/notificationSlice';
+import { DASHBOARD_PATH } from '../../const/routes';
 import ReporterAssignee from './ReporterAssignee';
 import SidebarRow from './SidebarRow';
 import AssignmentDialog from './AssignmentDialog';
@@ -22,299 +29,161 @@ import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 import DatePickerRow from './DatePickerRow';
 import PriorityRow from './PriorityRow';
 
-function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue }) {
+function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue, isAdmin }) {
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [detailsExpanded, setDetailsExpanded] = useState(true);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [priority, setPriority] = useState('High');
-    const [assignee, setAssignee] = useState(issue.assignee);
-    const [reporter, setReporter] = useState(issue.reporter);
+    const queryClient = useQueryClient();
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const mockAvailableUsers = [
-        { id: 1, name: 'John Citizen' },
-        { id: 2, name: 'Jane Staff' },
-        { id: 3, name: 'Admin User' },
-        { id: 4, name: 'Prince Upadhyay' },
-    ];
+    const { data: availableUsersData } = useUsers('STAFF');
+    const { data: statusesData } = useStatuses();
+    const { data: prioritiesData } = usePriorities();
 
-    const handleStatusChange = (newStatus) => {
-        console.log("Status changed to:", newStatus);
+    const availableUsers = availableUsersData || [];
+    const statuses = statusesData || [];
+    const priorities = prioritiesData || [];
+
+    const { mutate: updateIssueMutation } = useMutation({
+        mutationFn: updateIssue,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            dispatch(showNotification({ message: 'Issue updated successfully', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update issue', severity: 'error' }));
+        }
+    });
+
+    const { mutate: deleteIssueMutation, isPending: isDeleting } = useMutation({
+        mutationFn: deleteIssue,
+        onSuccess: () => {
+            dispatch(showNotification({ message: 'Issue deleted successfully', severity: 'success' }));
+            queryClient.invalidateQueries({ queryKey: ['issues'] });
+            navigate(DASHBOARD_PATH);
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to delete issue', severity: 'error' }));
+        }
+    });
+
+    const handleUpdate = (updateData) => {
+        updateIssueMutation({ issueId: issue.id, updateData });
     };
 
-    const handleAssignIssue = (userId) => {
-        console.log("Assigning issue to user ID:", userId);
-        setAssignDialogOpen(false);
+    const handleDelete = () => {
+        deleteIssueMutation(issue.id);
     };
 
-    const handleDeleteIssue = () => {
-        console.log("Issue deleted:", issue.title);
-        setDeleteDialogOpen(false);
-    };
-
-    const handleStartDateChange = (newDate) => {
-        setStartDate(newDate);
-        console.log("Start date changed to:", newDate);
-    };
-
-    const handleEndDateChange = (newDate) => {
-        setEndDate(newDate);
-        console.log("End date changed to:", newDate);
-    };
-
-    const handlePriorityChange = (newPriority) => {
-        setPriority(newPriority);
-        console.log("Priority changed to:", newPriority);
-    };
-
-    const handleAssigneeChange = (newAssignee) => {
-        setAssignee(newAssignee);
-        console.log("Assignee changed to:", newAssignee);
-    };
-
-    const handleReporterChange = (newReporter) => {
-        setReporter(newReporter);
-        console.log("Reporter changed to:", newReporter);
-    };
-
-    const getStatusChip = (status) => {
+    const getStatusChip = (statusName) => {
         const statusConfig = {
             'OPEN': { color: '#f85149', bgColor: 'rgba(248, 81, 73, 0.15)', label: 'OPEN' },
             'IN_PROGRESS': { color: '#5299FF', bgColor: 'rgba(82, 153, 255, 0.15)', label: 'IN PROGRESS' },
             'RESOLVED': { color: '#3fb950', bgColor: 'rgba(63, 185, 80, 0.15)', label: 'RESOLVED' }
         };
-
-        const config = statusConfig[status] || statusConfig['OPEN'];
-
-        return (
-            <Chip
-                label={config.label}
-                size="small"
-                sx={{
-                    backgroundColor: config.bgColor,
-                    color: config.color,
-                    border: `1px solid ${config.color}`,
-                    fontSize: '11px',
-                    height: 24,
-                    fontWeight: 700,
-                    letterSpacing: '0.5px',
-                    '& .MuiChip-label': {
-                        px: 1.5
-                    }
-                }}
-            />
-        );
+        const config = statusConfig[statusName] || statusConfig['OPEN'];
+        return <Chip label={config.label} size="small" sx={{ backgroundColor: config.bgColor, color: config.color, border: `1px solid ${config.color}`, fontSize: '11px', height: 24, fontWeight: 700, letterSpacing: '0.5px', '& .MuiChip-label': { px: 1.5 } }} />;
     };
 
     return (
-        <Box sx={{
-            width: '320px',
-            position: 'sticky',
-            top: '16px'
-        }}>
-            {/* Details Section */}
-            <Box sx={{
-                backgroundColor: '#282E33',
-                border: '1px solid #373E47',
-                borderRadius: 1,
-                mb: 2,
-                overflow: 'hidden'
-            }}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 1.5,
-                        backgroundColor: 'rgba(255,255,255,0.02)',
-                        borderBottom: '1px solid #373E47',
-                        cursor: 'pointer'
-                    }}
-                    onClick={() => setDetailsExpanded(!detailsExpanded)}
-                >
-                    <Typography sx={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: '#7D858D',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
-                        Details
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {canDeleteIssue && (
-                            <Tooltip title="Delete Issue">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDeleteDialogOpen(true);
-                                    }}
-                                    sx={{
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(248, 81, 73, 0.1)',
-                                            color: '#f85149'
-                                        }
-                                    }}
-                                >
-                                    <DeleteIcon sx={{ fontSize: 18 }} />
-                                </IconButton>
-                            </Tooltip>
-                        )}
-                        <ExpandMoreIcon
-                            sx={{
-                                fontSize: 24,
-                                color: '#7D858D',
-                                transform: detailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s'
-                            }}
-                        />
-                    </Box>
-                </Box>
-
-                {detailsExpanded && (
-                    <Box sx={{ p: 2 }}>
-                        <SidebarRow label="Status">
-                            {canChangeStatus ? (
-                                <FormControl size="small" sx={{ minWidth: 120 }}>
-                                    <Select
-                                        value={issue.status}
-                                        onChange={(e) => handleStatusChange(e.target.value)}
-                                        sx={{
-                                            '& .MuiSelect-select': {
-                                                py: 0,
-                                                px: 0,
-                                                border: 'none',
-                                                '&:focus': {
-                                                    backgroundColor: 'transparent'
-                                                }
-                                            },
-                                            '& .MuiOutlinedInput-notchedOutline': {
-                                                border: 'none'
-                                            },
-                                            '& .MuiSelect-icon': {
-                                                color: '#7D858D'
-                                            }
-                                        }}
-                                        renderValue={(value) => getStatusChip(value)}
-                                    >
-                                        <MenuItem value="OPEN">
-                                            <Chip
-                                                label="OPEN"
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#f85149',
-                                                    color: 'white',
-                                                    fontSize: '10px',
-                                                    height: 20,
-                                                    fontWeight: 600,
-                                                    '& .MuiChip-label': {
-                                                        px: 1
-                                                    }
-                                                }}
-                                            />
-                                        </MenuItem>
-                                        <MenuItem value="IN_PROGRESS">
-                                            <Chip
-                                                label="IN PROGRESS"
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#5299FF',
-                                                    color: 'white',
-                                                    fontSize: '10px',
-                                                    height: 20,
-                                                    fontWeight: 600,
-                                                    '& .MuiChip-label': {
-                                                        px: 1
-                                                    }
-                                                }}
-                                            />
-                                        </MenuItem>
-                                        <MenuItem value="RESOLVED">
-                                            <Chip
-                                                label="RESOLVED"
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#3fb950',
-                                                    color: 'white',
-                                                    fontSize: '10px',
-                                                    height: 20,
-                                                    fontWeight: 600,
-                                                    '& .MuiChip-label': {
-                                                        px: 1
-                                                    }
-                                                }}
-                                            />
-                                        </MenuItem>
-                                    </Select>
-                                </FormControl>
-                            ) : (
-                                getStatusChip(issue.status)
+        <>
+            <Box sx={{ width: '320px', position: 'sticky', top: '16px' }}>
+                <Box sx={{ backgroundColor: '#282E33', border: '1px solid #373E47', borderRadius: 1, mb: 2, overflow: 'hidden' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5, cursor: 'pointer' }} onClick={() => setDetailsExpanded(!detailsExpanded)}>
+                        <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#7D858D', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Details</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {canDeleteIssue && (
+                                <Tooltip title="Delete Issue">
+                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} sx={{ '&:hover': { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: '#f85149' } }}>
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                </Tooltip>
                             )}
-                        </SidebarRow>
-
-                        <ReporterAssignee
-                            label={"Assignee"}
-                            value={assignee}
-                            onChange={handleAssigneeChange}
-                            hasEdit={canChangeStatus || canAssignIssue}
-                            availableUsers={mockAvailableUsers}
-                        />
-
-                        <ReporterAssignee
-                            label={"Reporter"}
-                            value={reporter}
-                            onChange={handleReporterChange}
-                            hasEdit={canChangeStatus || canAssignIssue}
-                            availableUsers={mockAvailableUsers}
-                        />
-
-                        <PriorityRow
-                            value={priority}
-                            onChange={handlePriorityChange}
-                            hasEdit={canChangeStatus || canAssignIssue}
-                        />
-
-                        <SidebarRow label="Date Reported">
-                            <Typography sx={{ fontSize: '13px', color: '#E6EDF2' }}>
-                                {new Date(issue.reportedAt).toLocaleDateString()}
-                            </Typography>
-                        </SidebarRow>
-
-                        <DatePickerRow
-                            label="Start Date"
-                            value={startDate}
-                            onChange={handleStartDateChange}
-                            hasEdit={canChangeStatus || canAssignIssue}
-                        />
-
-                        <DatePickerRow
-                            label="End Date"
-                            value={endDate}
-                            onChange={handleEndDateChange}
-                            hasEdit={canChangeStatus || canAssignIssue}
-                        />
+                            <ExpandMoreIcon sx={{ fontSize: 24, color: '#7D858D', transform: detailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                        </Box>
                     </Box>
-                )}
+
+                    {detailsExpanded && (
+                        <Box sx={{ p: 2 }}>
+                            <SidebarRow label="Status">
+                                {canChangeStatus ? (
+                                    <FormControl size="small" fullWidth>
+                                        <Select
+                                            value={issue.status.id}
+                                            onChange={(e) => handleUpdate({ statusId: e.target.value })}
+                                            sx={{ '& .MuiSelect-select': { py: 0, px: 0, border: 'none' }, '& .MuiOutlinedInput-notchedOutline': { border: 'none' } }}
+                                            renderValue={() => getStatusChip(issue.status.name)}
+                                        >
+                                            {statuses.map(status => (
+                                                <MenuItem key={status.id} value={status.id}>{getStatusChip(status.name)}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                ) : (getStatusChip(issue.status.name))}
+                            </SidebarRow>
+
+                            <ReporterAssignee
+                                label={"Assignee"}
+                                value={issue.assignee}
+                                onChange={(newAssignee) => handleUpdate({ assigneeId: newAssignee ? newAssignee.id : 0 })}
+                                hasEdit={canAssignIssue}
+                                availableUsers={availableUsers}
+                                avatarColor="#FF5722"
+                            />
+                            <ReporterAssignee
+                                label={"Reporter"}
+                                value={issue.reporter}
+                                onChange={(newReporter) => handleUpdate({ reporterId: newReporter.id })}
+                                hasEdit={isAdmin}
+                                availableUsers={availableUsers}
+                                avatarColor="#F44336"
+                            />
+                            <PriorityRow
+                                value={issue.priority?.name}
+                                onChange={(newPriority) => handleUpdate({ priorityId: newPriority.id })}
+                                hasEdit={canChangeStatus}
+                                availablePriorities={priorities}
+                            />
+
+                            <SidebarRow label="Date Reported">
+                                <Typography sx={{ fontSize: '13px', color: '#E6EDF2' }}>
+                                    {new Date(issue.createdAt).toLocaleDateString()}
+                                </Typography>
+                            </SidebarRow>
+
+                            <DatePickerRow
+                                label="Start Date"
+                                value={issue.startDate ? issue.startDate.split('T')[0] : ''}
+                                onChange={(newDate) => handleUpdate({ startDate: newDate ? new Date(newDate).toISOString() : null })}
+                                hasEdit={canChangeStatus}
+                            />
+                            <DatePickerRow
+                                label="End Date"
+                                value={issue.dueDate ? issue.dueDate.split('T')[0] : ''}
+                                onChange={(newDate) => handleUpdate({ dueDate: newDate ? new Date(newDate).toISOString() : null })}
+                                hasEdit={canChangeStatus}
+                            />
+                        </Box>
+                    )}
+                </Box>
             </Box>
 
             <AssignmentDialog
                 open={isAssignDialogOpen}
                 onClose={() => setAssignDialogOpen(false)}
-                onAssign={handleAssignIssue}
+                onAssign={(userId) => handleUpdate({ assigneeId: userId })}
                 currentAssignee={issue.assignee}
-                availableUsers={mockAvailableUsers}
+                availableUsers={availableUsers}
             />
-
             <DeleteConfirmationDialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
-                onConfirm={handleDeleteIssue}
-                item={'Issue'}
+                onConfirm={handleDelete}
+                item={`Issue "${issue.title}"`}
+                isDeleting={isDeleting}
             />
-        </Box>
+        </>
     );
 }
 

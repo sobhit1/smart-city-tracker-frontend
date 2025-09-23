@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -15,13 +15,15 @@ import {
     CircularProgress,
     Paper,
     Avatar,
+    IconButton,
+    InputAdornment,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
+import { useRegister } from '../../api/authApi';
 import { setAuth } from '../../state/authSlice';
 import { showNotification } from '../../state/notificationSlice';
-import apiClient from '../../toolkit/apiClient';
-import { REGISTER_API } from '../../const/api';
 import { LOGIN_PATH, DASHBOARD_PATH } from '../../const/routes';
 
 const schema = yup.object().shape({
@@ -47,48 +49,41 @@ function Copyright(props) {
 }
 
 function Register() {
-    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
     });
 
-    const onSubmit = async (data) => {
-        setLoading(true);
-        try {
-            const payload = {
-                fullName: data.fullName,
-                userName: data.userName,
-                password: data.password,
-            };
+    const { mutate: registerMutation, isPending: loading } = useRegister({ 
+         onSuccess: (data) => { 
+             dispatch(setAuth(data)); 
+             navigate(DASHBOARD_PATH); 
+         }, 
+         onError: (error) => { 
+             const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.'; 
+             dispatch(showNotification({ message: errorMessage, severity: 'error' })); 
+         }, 
+     }); 
 
-            const response = await apiClient.post(REGISTER_API, payload);
-
-            dispatch(setAuth(response.data));
-
-            navigate(DASHBOARD_PATH);
-        } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-            dispatch(showNotification({ message: errorMessage, severity: 'error' }));
-        } finally {
-            setLoading(false);
-        }
-    };
+     const onSubmit = (data) => { 
+         const payload = { 
+             fullName: data.fullName, 
+             userName: data.userName, 
+             password: data.password, 
+         }; 
+         registerMutation(payload); 
+     };
 
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4 }}>
             <Container component="main" maxWidth="xs">
                 <Paper
                     elevation={6}
-                    sx={{
-                        padding: 4,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        borderRadius: 2,
-                    }}
+                    sx={{ padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2, }}
                 >
                     <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
                         <LockOutlinedIcon />
@@ -122,30 +117,58 @@ function Register() {
                             error={!!errors.userName}
                             helperText={errors.userName?.message}
                         />
+                        {/* 4. Update the Password TextField */}
                         <TextField
                             margin="normal"
                             required
                             fullWidth
                             name="password"
                             label="Password"
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             id="password"
                             autoComplete="new-password"
                             {...register('password')}
                             error={!!errors.password}
                             helperText={errors.password?.message}
+                            InputProps={{
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    <IconButton
+                                      onClick={() => setShowPassword((show) => !show)}
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      edge="end"
+                                    >
+                                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                  </InputAdornment>
+                                ),
+                              }}
                         />
+                        {/* 5. Update the Confirm Password TextField */}
                         <TextField
                             margin="normal"
                             required
                             fullWidth
                             name="confirmPassword"
                             label="Confirm Password"
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             id="confirmPassword"
                             {...register('confirmPassword')}
                             error={!!errors.confirmPassword}
                             helperText={errors.confirmPassword?.message}
+                            InputProps={{
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    <IconButton
+                                      onClick={() => setShowConfirmPassword((show) => !show)}
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      edge="end"
+                                    >
+                                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                  </InputAdornment>
+                                ),
+                              }}
                         />
                         <Button
                             type="submit"

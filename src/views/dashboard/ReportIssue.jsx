@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // 1. Import mutation hooks
 import {
   Box,
   Typography,
@@ -26,21 +27,21 @@ import {
   IconButton,
   FormHelperText,
 } from '@mui/material';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import ReportIcon from '@mui/icons-material/Report';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
-import MyLocationIcon from '@mui/icons-material/MyLocation';
-import CloseIcon from '@mui/icons-material/Close';
-
+import {
+  Report as ReportIcon,
+  TipsAndUpdates as TipsAndUpdatesIcon,
+  PriorityHigh as PriorityHighIcon,
+  MyLocation as MyLocationIcon,
+  Close as CloseIcon,
+  AttachFile as AttachFileIcon
+} from '@mui/icons-material';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { createIssue } from '../../api/issuesApi';
+import { useCategories } from '../../hooks/useLookups';
 import { showNotification } from '../../state/notificationSlice';
 import { DASHBOARD_PATH } from '../../const/routes';
-
-const categories = ['Roads', 'Waste Management', 'Streetlights', 'Water Supply', 'Parks & Trees', 'Other'];
 
 const schema = yup.object().shape({
   title: yup.string().required('Issue title is required').min(10, 'Title must be at least 10 characters long'),
@@ -70,10 +71,13 @@ function LocationPicker({ onLocationSelect }) {
 }
 
 function ReportIssue() {
-  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mapCenter, setMapCenter] = useState([18.61, 73.72]);
+
+  const { data: categoriesData, isLoading: areCategoriesLoading } = useCategories();
+  const categories = categoriesData?.map(c => c.name) || [];
 
   const { control, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: yupResolver(schema),
@@ -88,7 +92,24 @@ function ReportIssue() {
 
   const selectedLocation = watch('location');
   const selectedFiles = watch('files');
+  
+  const { mutate: createIssueMutation, isPending: loading } = useMutation({
+      mutationFn: createIssue,
+      onSuccess: () => {
+          dispatch(showNotification({ message: 'Issue reported successfully!', severity: 'success' }));
+          queryClient.invalidateQueries({ queryKey: ['issues'] });
+          navigate(DASHBOARD_PATH);
+      },
+      onError: (error) => {
+          const errorMessage = error.response?.data?.message || 'Failed to report issue. Please try again.';
+          dispatch(showNotification({ message: errorMessage, severity: 'error' }));
+      }
+  });
 
+  const onSubmit = (data) => {
+    createIssueMutation(data);
+  };
+  
   const handleGetCurrentLocation = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -114,19 +135,6 @@ function ReportIssue() {
     setValue('files', newFiles, { shouldValidate: true });
   };
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      await createIssue(data);
-      dispatch(showNotification({ message: 'Issue reported successfully!', severity: 'success' }));
-      navigate(DASHBOARD_PATH);
-    } catch (error) {
-      const errorMessage = error.message || 'Failed to report issue. Please try again.';
-      dispatch(showNotification({ message: errorMessage, severity: 'error' }));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <Box
@@ -142,27 +150,10 @@ function ReportIssue() {
         <Container maxWidth="xl" sx={{ py: 0, px: { xs: 3, sm: 4, md: 5 }, flexGrow: 1 }}>
           {/* Header Section */}
           <Box sx={{ mb: 6 }}>
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{
-                fontWeight: 600,
-                color: 'primary.main',
-                mb: 2,
-                fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' }
-              }}
-            >
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: 'primary.main', mb: 2, fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' } }}>
               Report a New Issue
             </Typography>
-            <Typography
-              variant="body1"
-              sx={{
-                color: 'text.secondary',
-                maxWidth: 700,
-                fontSize: { xs: '0.9rem', sm: '1rem' },
-                lineHeight: 1.6
-              }}
-            >
+            <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 700, fontSize: { xs: '0.9rem', sm: '1rem' }, lineHeight: 1.6 }}>
               Help improve your community by reporting issues that need attention
             </Typography>
           </Box>
@@ -170,50 +161,18 @@ function ReportIssue() {
           <Grid container spacing={4}>
             {/* Left section: Form */}
             <Grid item xs={12} lg={8} display="flex" flexDirection="column">
-              <Paper
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  backgroundColor: '#22272B',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  flexGrow: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
+              <Paper elevation={0} sx={{ borderRadius: 3, backgroundColor: '#22272B', border: '1px solid', borderColor: 'divider', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: { xs: 3, sm: 4, md: 5 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-                    <Box
-                      sx={{
-                        backgroundColor: 'primary.main',
-                        borderRadius: 2,
-                        width: 40,
-                        height: 40,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mr: 2.5,
-                      }}
-                    >
+                    <Box sx={{ backgroundColor: 'primary.main', borderRadius: 2, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2.5 }}>
                       <ReportIcon sx={{ color: 'white', fontSize: 22 }} />
                     </Box>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 600,
-                        color: 'text.primary',
-                        fontSize: { xs: '1.1rem', sm: '1.25rem' }
-                      }}
-                    >
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                       Issue Details
                     </Typography>
                   </Box>
 
-                  <form
-                    onSubmit={handleSubmit(onSubmit)}
-                    style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}
-                  >
+                  <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                     <Grid container spacing={4} sx={{ flexGrow: 1 }}>
                       {/* Issue Title */}
                       <Grid item xs={12}>
@@ -270,6 +229,7 @@ function ReportIssue() {
                               <Select
                                 {...field}
                                 label="Category"
+                                disabled={areCategoriesLoading}
                                 sx={{
                                   minWidth: { xs: '60vw', md: '25vw' },
                                   height: '56px',
