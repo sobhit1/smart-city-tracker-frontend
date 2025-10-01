@@ -71,7 +71,7 @@ function Navbar() {
           </Typography>
           <IconButton onClick={handleClick} size="small" sx={{ ml: 2 }}>
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-              {user?.fullName[0].toUpperCase() || '?'}
+              {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
             </Avatar>
           </IconButton>
         </Box>

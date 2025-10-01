@@ -14,7 +14,6 @@ import {
     Tooltip,
 } from '@mui/material';
 import {
-    ExpandMore as ExpandMoreIcon,
     Delete as DeleteIcon,
 } from '@mui/icons-material';
 
@@ -89,19 +88,54 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
     return (
         <>
             <Box sx={{ width: '320px', position: 'sticky', top: '16px' }}>
-                <Box sx={{ backgroundColor: '#282E33', border: '1px solid #373E47', borderRadius: 1, mb: 2, overflow: 'hidden' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5, cursor: 'pointer' }} onClick={() => setDetailsExpanded(!detailsExpanded)}>
-                        <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#7D858D', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Details</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {canDeleteIssue && (
-                                <Tooltip title="Delete Issue">
-                                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); setDeleteDialogOpen(true); }} sx={{ '&:hover': { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: '#f85149' } }}>
-                                        <DeleteIcon sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            )}
-                            <ExpandMoreIcon sx={{ fontSize: 24, color: '#7D858D', transform: detailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                        </Box>
+                <Box
+                    sx={{
+                        backgroundColor: '#282E33',
+                        border: '1px solid #373E47',
+                        borderRadius: 1,
+                        mb: 2,
+                        overflow: 'hidden'
+                    }}
+                >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            px: 2,
+                            py: 1.5
+                        }}
+                    >
+                        <Typography
+                            sx={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: '#7D858D',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                            }}
+                        >
+                            Details
+                        </Typography>
+                        {canDeleteIssue && (
+                            <Tooltip title="Delete Issue">
+                                <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteDialogOpen(true);
+                                    }}
+                                    sx={{
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                                            color: '#f85149'
+                                        }
+                                    }}
+                                >
+                                    <DeleteIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                     </Box>
 
                     {detailsExpanded && (
@@ -112,27 +146,42 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
                                         <Select
                                             value={issue.status.id}
                                             onChange={(e) => handleUpdate({ statusId: e.target.value })}
-                                            sx={{ '& .MuiSelect-select': { py: 0, px: 0, border: 'none' }, '& .MuiOutlinedInput-notchedOutline': { border: 'none' } }}
-                                            renderValue={() => getStatusChip(issue.status.name)}
+                                            sx={{
+                                                '& .MuiSelect-select': {
+                                                    py: 0,
+                                                    px: 0,
+                                                    border: 'none'
+                                                },
+                                                '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
+                                            }}
+                                            renderValue={() =>
+                                                getStatusChip(issue?.status?.name || 'OPEN')
+                                            }
                                         >
-                                            {statuses.map(status => (
-                                                <MenuItem key={status.id} value={status.id}>{getStatusChip(status.name)}</MenuItem>
+                                            {statuses.map((status) => (
+                                                <MenuItem key={status.id} value={status.id}>
+                                                    {getStatusChip(status?.name || 'OPEN')}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
-                                ) : (getStatusChip(issue.status.name))}
+                                ) : (
+                                    getStatusChip(issue?.status?.name || 'OPEN')
+                                )}
                             </SidebarRow>
 
                             <ReporterAssignee
-                                label={"Assignee"}
+                                label={'Assignee'}
                                 value={issue.assignee}
-                                onChange={(newAssignee) => handleUpdate({ assigneeId: newAssignee ? newAssignee.id : 0 })}
+                                onChange={(newAssignee) =>
+                                    handleUpdate({ assigneeId: newAssignee ? newAssignee.id : 0 })
+                                }
                                 hasEdit={canAssignIssue}
                                 availableUsers={availableUsers}
                                 avatarColor="#FF5722"
                             />
                             <ReporterAssignee
-                                label={"Reporter"}
+                                label={'Reporter'}
                                 value={issue.reporter}
                                 onChange={(newReporter) => handleUpdate({ reporterId: newReporter.id })}
                                 hasEdit={isAdmin}
@@ -140,7 +189,7 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
                                 avatarColor="#F44336"
                             />
                             <PriorityRow
-                                value={issue.priority?.name}
+                                value={issue?.priority?.name || 'Medium'}
                                 onChange={(newPriority) => handleUpdate({ priorityId: newPriority.id })}
                                 hasEdit={canChangeStatus}
                                 availablePriorities={priorities}
@@ -148,20 +197,34 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
 
                             <SidebarRow label="Date Reported">
                                 <Typography sx={{ fontSize: '13px', color: '#E6EDF2' }}>
-                                    {new Date(issue.createdAt).toLocaleDateString()}
+                                    {issue.createdAt
+                                        ? new Date(issue.createdAt).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                          })
+                                        : ''}
                                 </Typography>
                             </SidebarRow>
 
                             <DatePickerRow
                                 label="Start Date"
                                 value={issue.startDate ? issue.startDate.split('T')[0] : ''}
-                                onChange={(newDate) => handleUpdate({ startDate: newDate ? new Date(newDate).toISOString() : null })}
+                                onChange={(newDate) =>
+                                    handleUpdate({
+                                        startDate: newDate ? new Date(newDate).toISOString() : null
+                                    })
+                                }
                                 hasEdit={canChangeStatus}
                             />
                             <DatePickerRow
                                 label="End Date"
                                 value={issue.dueDate ? issue.dueDate.split('T')[0] : ''}
-                                onChange={(newDate) => handleUpdate({ dueDate: newDate ? new Date(newDate).toISOString() : null })}
+                                onChange={(newDate) =>
+                                    handleUpdate({
+                                        dueDate: newDate ? new Date(newDate).toISOString() : null
+                                    })
+                                }
                                 hasEdit={canChangeStatus}
                             />
                         </Box>

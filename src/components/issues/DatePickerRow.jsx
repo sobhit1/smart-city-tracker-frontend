@@ -3,14 +3,11 @@ import PropTypes from 'prop-types';
 import {
     Box,
     Typography,
-    IconButton,
     TextField,
     Fade,
 } from '@mui/material';
 import {
     CalendarToday as CalendarIcon,
-    Check as CheckIcon,
-    Close as CloseIcon
 } from '@mui/icons-material';
 
 import SidebarRow from './SidebarRow';
@@ -23,14 +20,9 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
         setDateValue(value || '');
     }, [value]);
 
-    const handleSave = () => {
-        onChange(dateValue);
-        setIsEditing(false);
-    };
-
-    const handleCancel = () => {
-        setDateValue(value || '');
-        setIsEditing(false);
+    const handleDateChange = (newValue) => {
+        setDateValue(newValue);
+        onChange(newValue);
     };
 
     const formatDisplayDate = (dateStr) => {
@@ -52,12 +44,12 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
         >
             {isEditing ? (
                 <Fade in={true} timeout={200}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <TextField
                             type="date"
                             size="small"
                             value={dateValue}
-                            onChange={(e) => setDateValue(e.target.value)}
+                            onChange={(e) => handleDateChange(e.target.value)}
                             sx={{
                                 '& .MuiInputBase-root': {
                                     fontSize: '13px',
@@ -83,33 +75,8 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
                                 width: '140px'
                             }}
                             autoFocus
+                            onBlur={() => setIsEditing(false)}
                         />
-                        <IconButton
-                            size="small"
-                            onClick={handleSave}
-                            sx={{
-                                backgroundColor: '#5299FF',
-                                color: 'white',
-                                width: 24,
-                                height: 24,
-                                '&:hover': { backgroundColor: '#4285E8' }
-                            }}
-                        >
-                            <CheckIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                        <IconButton
-                            size="small"
-                            onClick={handleCancel}
-                            sx={{
-                                backgroundColor: 'rgba(139, 148, 158, 0.1)',
-                                color: '#8B949E',
-                                width: 24,
-                                height: 24,
-                                '&:hover': { backgroundColor: 'rgba(139, 148, 158, 0.2)' }
-                            }}
-                        >
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
                     </Box>
                 </Fade>
             ) : (
@@ -128,6 +95,7 @@ function DatePickerRow({ label, value, onChange, hasEdit = false }) {
         </SidebarRow>
     );
 }
+
 DatePickerRow.propTypes = {
     label: PropTypes.string.isRequired,
     value: PropTypes.string,

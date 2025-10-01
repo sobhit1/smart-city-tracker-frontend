@@ -45,11 +45,11 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
 
     return (
         <Box sx={{ display: 'flex', gap: 2, py: 2 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.dark' }}>{comment.author.name[0].toUpperCase()}</Avatar>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.dark' }}>{comment?.author?.name?.charAt(0)?.toUpperCase() || '?'}</Avatar>
             <Box sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {comment.author.name}
+                        {comment?.author?.name || 'Unknown User'}
                         <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                             - {new Date(comment.createdAt).toLocaleString()}
                         </Typography>
@@ -88,7 +88,7 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
                     <Button
                         size="small"
                         startIcon={<ReplyIcon />}
-                        onClick={() => onReply(comment.author.name)}
+                        onClick={() => onReply(comment?.author?.name || 'Unknown User')}
                         sx={{ textTransform: 'none', color: 'text.secondary', fontSize: '0.75rem', mt: 1 }}
                     >
                         Reply
@@ -259,7 +259,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
                     open={!!commentToDelete}
                     onClose={() => setCommentToDelete(null)}
                     onConfirm={() => deleteCommentMutation({ issueId, commentId: commentToDelete.id })}
-                    item={`comment by ${commentToDelete.author.name}`}
+                    item={`comment by ${commentToDelete?.author?.name || 'Unknown User'}`}
                     isDeleting={isDeletingComment}
                 />
             )}

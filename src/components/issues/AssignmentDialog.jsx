@@ -12,6 +12,7 @@ import {
     DialogActions,
     Button,
     InputLabel,
+    Typography,
 } from '@mui/material';
 
 function AssignmentDialog({ open, onClose, onAssign, currentAssignee, availableUsers }) {
@@ -67,9 +68,9 @@ function AssignmentDialog({ open, onClose, onAssign, currentAssignee, availableU
                                         bgcolor: '#5299FF',
                                         fontWeight: 600
                                     }}>
-                                        {user.name[0]}
+                                        {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
                                     </Avatar>
-                                    {user.name}
+                                    <Typography variant="body2">{user?.fullName || 'Unknown User'}</Typography>
                                 </Box>
                             </MenuItem>
                         ))}
