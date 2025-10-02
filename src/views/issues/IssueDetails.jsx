@@ -9,7 +9,7 @@ import { DASHBOARD_PATH } from '../../const/routes';
 
 import IssueContent from '../../components/issues/IssueContent';
 import DetailsSidebar from '../../components/issues/DetailsSidebar';
-import CommentsSection from '../../components/issues/CommentsSection';
+import CommentsSection from '../../components/issues/comments/CommentsSection';
 
 function IssueDetails() {
     const { issueId } = useParams();
