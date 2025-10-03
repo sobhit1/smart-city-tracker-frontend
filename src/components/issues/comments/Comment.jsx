@@ -50,7 +50,6 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
     const menuOpen = Boolean(anchorEl);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     const canEditComment = currentUser.id === comment.author.id;
     const canDeleteComment = canDeleteAnyComment || canEditComment;
@@ -96,7 +95,7 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
 
     const confirmDeleteAttachment = () => {
         if (attachmentToDelete) {
-            onDeleteAttachment(comment.id, attachmentToDelete.id);
+            onDeleteAttachment(attachmentToDelete.id);
             setAttachmentToDelete(null);
         }
     };
@@ -118,7 +117,6 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
 
     const marginLeft = isMobile ? Math.min(level, 3) * 2 : Math.min(level, 6) * 5;
     const maxNestingLevel = isMobile ? 3 : 6;
-    const isMaxNesting = level >= maxNestingLevel;
 
     return (
         <Box sx={{ position: 'relative' }}>

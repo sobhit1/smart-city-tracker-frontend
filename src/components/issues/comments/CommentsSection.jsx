@@ -40,7 +40,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         }
     });
 
-    const { mutate: updateCommentMutation, isPending: isUpdatingComment } = useMutation({
+    const { mutate: updateCommentMutation } = useMutation({
         mutationFn: updateComment,
         onSuccess: () => {
             queryClient.invalidateQueries(['issue', issueId]);
@@ -63,7 +63,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         }
     });
 
-    const { mutate: deleteAttachmentMutation, isPending: isDeletingAttachment } = useMutation({
+    const { mutate: deleteAttachmentMutation } = useMutation({
         mutationFn: deleteAttachment,
         onSuccess: () => {
             queryClient.invalidateQueries(['issue', issueId]);
@@ -114,7 +114,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         }
     };
 
-    const handleDeleteAttachment = (commentId, attachmentId) => {
+    const handleDeleteAttachment = (attachmentId) => {
         deleteAttachmentMutation({ issueId, attachmentId });
     };
 
@@ -181,9 +181,6 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
                             onDelete={handleDeleteComment}
                             onReply={handleReply}
                             onDeleteAttachment={handleDeleteAttachment}
-                            isUpdating={isUpdatingComment}
-                            isReplying={isAddingComment}
-                            isDeletingAttachment={deleteAttachmentMutation.isPending}
                             level={0}
                         />
                     ))}
