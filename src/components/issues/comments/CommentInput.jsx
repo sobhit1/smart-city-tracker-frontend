@@ -10,9 +10,18 @@ import {
     Stack,
     useTheme,
     useMediaQuery,
+    Chip,
+    Tooltip,
+    Fade,
+    LinearProgress,
+    Alert,
+    Collapse,
 } from '@mui/material';
 import {
     AttachFile as AttachFileIcon,
+    Send as SendIcon,
+    EmojiEmotions as EmojiIcon,
+    Close as CloseIcon,
 } from '@mui/icons-material';
 
 import AttachmentList from './AttachmentList';
@@ -20,20 +29,26 @@ import UserMentionAutocomplete from './UserMentionAutocomplete';
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_CHARS = 5000;
 
 const MENTION_MARKER = '\u200B';
 
-function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files, onFileChange, onRemoveFile, isSubmitting, placeholder, autoFocus }) {
+function CommentInput({ value, onChange, onSubmit, onCancel, files, onFileChange, onRemoveFile, isSubmitting, placeholder, autoFocus }) {
     const [mentionAnchorEl, setMentionAnchorEl] = useState(null);
     const [mentionSearch, setMentionSearch] = useState('');
     const [mentionStartPos, setMentionStartPos] = useState(null);
     const [internalValue, setInternalValue] = useState(value);
+    const [isFocused, setIsFocused] = useState(false);
+    const [fileError, setFileError] = useState('');
+    const [charCount, setCharCount] = useState(0);
     const inputRef = useRef(null);
+    const fileInputRef = useRef(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     useEffect(() => {
         setInternalValue(value);
+        setCharCount(value.length);
     }, [value]);
 
     const parseMentionsToDisplay = (text) => {
@@ -42,9 +57,15 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
 
     const handleTextChange = (e) => {
         const text = e.target.value;
+        
+        if (text.length > MAX_CHARS) {
+            return;
+        }
+
         const cursorPos = e.target.selectionStart;
         
         setInternalValue(text);
+        setCharCount(text.length);
         onChange(text);
 
         const textBeforeCursor = text.substring(0, cursorPos);
@@ -52,22 +73,22 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
         
         if (lastAtIndex !== -1) {
             const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
-            const hasSpace = textAfterAt.includes(' ');
-            const hasNewline = textAfterAt.includes('\n');
+            const hasSpace = textAfterAt.includes(' ') || textAfterAt.includes('\n');
             
-            if (!hasSpace && !hasNewline && textAfterAt.length >= 0) {
+            if (!hasSpace && textAfterAt.length >= 0) {
                 const beforeAt = textBeforeCursor.substring(0, lastAtIndex);
-                const hasMentionBefore = /@\[[^\]]+\]$/.test(beforeAt);
+                const hasMentionBefore = /@\[[^\]]+\]\s?$/.test(beforeAt);
                 
                 if (!hasMentionBefore) {
                     setMentionSearch(textAfterAt);
                     setMentionStartPos(lastAtIndex);
-                    setMentionAnchorEl(e.target);
+                    if (inputRef.current) {
+                        setMentionAnchorEl(inputRef.current);
+                    }
                     return;
                 }
             }
         }
-        
         setMentionAnchorEl(null);
     };
 
@@ -75,20 +96,19 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
         if (mentionStartPos !== null) {
             const beforeMention = internalValue.substring(0, mentionStartPos);
             const afterMention = internalValue.substring(mentionStartPos + mentionSearch.length + 1);
-            const mentionText = `@[${user.name}]`;
+            const mentionText = `@[${user.fullName}]`;
             const newText = `${beforeMention}${mentionText}${MENTION_MARKER} ${afterMention}`;
             
             setInternalValue(newText);
+            setCharCount(newText.length);
             onChange(newText);
             
             setTimeout(() => {
                 const newCursorPos = mentionStartPos + mentionText.length + 2;
-                if (inputRef.current) {
-                    const input = inputRef.current.querySelector('textarea');
-                    if (input) {
-                        input.focus();
-                        input.setSelectionRange(newCursorPos, newCursorPos);
-                    }
+                const input = inputRef.current?.querySelector('textarea');
+                if (input) {
+                    input.focus();
+                    input.setSelectionRange(newCursorPos, newCursorPos);
                 }
             }, 0);
         }
@@ -98,6 +118,14 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
     };
 
     const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !isSubmitting) {
+            e.preventDefault();
+            if (internalValue.trim() !== '' || files.length > 0) {
+                onSubmit();
+            }
+            return;
+        }
+
         if (e.key === 'Escape' && mentionAnchorEl) {
             setMentionAnchorEl(null);
             e.preventDefault();
@@ -116,6 +144,7 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
                     e.preventDefault();
                     const newText = internalValue.substring(0, cursorPos - mentionMatch[0].length) + internalValue.substring(cursorPos);
                     setInternalValue(newText);
+                    setCharCount(newText.length);
                     onChange(newText);
                     setTimeout(() => {
                         const input = e.target;
@@ -152,6 +181,7 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
     };
 
     const handleBlur = () => {
+        setIsFocused(false);
         setTimeout(() => {
             setMentionAnchorEl(null);
         }, 200);
@@ -177,106 +207,310 @@ function CommentInput({ value, onChange, onSubmit, onCancel, currentUser, files,
         const { validFiles, errors } = validateFiles(newFiles);
         
         if (errors.length > 0) {
-            alert(errors.join('\n'));
+            setFileError(errors.join(', '));
+            setTimeout(() => setFileError(''), 5000);
         }
 
         const totalFiles = files.length + validFiles.length;
         if (totalFiles > MAX_FILES) {
-            alert(`You can only attach up to ${MAX_FILES} files. ${totalFiles - MAX_FILES} file(s) will be ignored.`);
+            setFileError(`Maximum ${MAX_FILES} files allowed. ${totalFiles - MAX_FILES} file(s) will be ignored.`);
+            setTimeout(() => setFileError(''), 5000);
         }
 
         onFileChange({ target: { files: validFiles } });
         event.target.value = '';
     };
 
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (files.length >= MAX_FILES) {
+            setFileError(`Maximum ${MAX_FILES} files allowed`);
+            setTimeout(() => setFileError(''), 5000);
+            return;
+        }
+
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        const { validFiles, errors } = validateFiles(droppedFiles);
+        
+        if (errors.length > 0) {
+            setFileError(errors.join(', '));
+            setTimeout(() => setFileError(''), 5000);
+        }
+
+        if (validFiles.length > 0) {
+            onFileChange({ target: { files: validFiles } });
+        }
+    };
+
     const displayValue = parseMentionsToDisplay(internalValue);
+    const isNearLimit = charCount > MAX_CHARS * 0.8;
+    const hasContent = internalValue.trim() !== '' || files.length > 0;
 
     return (
-        <Box>
+        <Box
+            sx={{
+                position: 'relative',
+                borderRadius: 2,
+                border: 2,
+                borderColor: isFocused ? 'primary.main' : 'divider',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: isFocused ? 4 : 1,
+                bgcolor: 'background.paper',
+                overflow: 'hidden',
+            }}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+            <Collapse in={!!fileError}>
+                <Alert
+                    severity="warning"
+                    icon={false}
+                    sx={{
+                        borderRadius: 0,
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        py: 0.75,
+                    }}
+                    action={
+                        <IconButton
+                            size="small"
+                            onClick={() => setFileError('')}
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    }
+                >
+                    {fileError}
+                </Alert>
+            </Collapse>
+
             <TextField
                 fullWidth
                 multiline
-                rows={isMobile ? 2 : 3}
-                placeholder={placeholder || "Add a comment... (Use @ to mention someone)"}
+                rows={isMobile ? 3 : 4}
+                placeholder={placeholder || "Add a comment... (Use @ to mention • Cmd/Ctrl + Enter to send)"}
                 value={displayValue}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
                 onBlur={handleBlur}
                 ref={inputRef}
                 autoFocus={autoFocus}
-                sx={{ 
-                    '& .MuiOutlinedInput-root': { 
-                        borderBottomLeftRadius: files.length > 0 ? 0 : undefined,
-                        borderBottomRightRadius: files.length > 0 ? 0 : undefined,
-                    } 
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        '& fieldset': { border: 'none' },
+                        '&:hover fieldset': { border: 'none' },
+                        '&.Mui-focused fieldset': { border: 'none' },
+                        fontSize: isMobile ? 14 : 15,
+                        lineHeight: 1.6,
+                    },
+                    '& .MuiInputBase-input': {
+                        p: 2,
+                        '&::placeholder': {
+                            color: 'text.secondary',
+                            opacity: 0.7,
+                        }
+                    }
                 }}
             />
+
+            {isNearLimit && (
+                <Box sx={{ px: 2, pb: 1 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <LinearProgress
+                            variant="determinate"
+                            value={(charCount / MAX_CHARS) * 100}
+                            sx={{
+                                flexGrow: 1,
+                                height: 4,
+                                borderRadius: 2,
+                                bgcolor: 'action.hover',
+                                '& .MuiLinearProgress-bar': {
+                                    bgcolor: charCount >= MAX_CHARS ? 'error.main' : 'warning.main',
+                                    borderRadius: 2,
+                                }
+                            }}
+                        />
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                fontWeight: 600,
+                                color: charCount >= MAX_CHARS ? 'error.main' : 'warning.main',
+                                minWidth: 70,
+                                textAlign: 'right',
+                            }}
+                        >
+                            {charCount}/{MAX_CHARS}
+                        </Typography>
+                    </Stack>
+                </Box>
+            )}
             
-            {files.length > 0 && (
-                <Box sx={{ 
-                    p: 2, 
-                    bgcolor: 'grey.50', 
-                    border: 1, 
-                    borderColor: 'divider',
-                    borderTop: 0,
-                    borderBottomLeftRadius: 0,
-                    borderBottomRightRadius: 0
-                }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
-                        Attachments ({files.length}/{MAX_FILES})
-                    </Typography>
+            <Collapse in={files.length > 0}>
+                <Box sx={{ px: 2, pb: 2, bgcolor: 'action.hover' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            Attachments
+                        </Typography>
+                        <Chip
+                            label={`${files.length}/${MAX_FILES}`}
+                            size="small"
+                            sx={{
+                                height: 20,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                bgcolor: files.length >= MAX_FILES ? 'error.lighter' : 'primary.lighter',
+                                color: files.length >= MAX_FILES ? 'error.dark' : 'primary.dark',
+                            }}
+                        />
+                    </Stack>
                     <AttachmentList 
                         attachments={files} 
-                        onDelete={(file) => {
-                            const index = files.indexOf(file);
-                            if (index !== -1) onRemoveFile(index);
-                        }}
+                        onDelete={(file) => onRemoveFile(files.indexOf(file))}
                         canDelete={true}
                     />
                 </Box>
-            )}
+            </Collapse>
 
-            <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                p: 1.5, 
-                border: 1, 
-                borderColor: 'divider', 
-                borderTop: 0, 
-                borderBottomLeftRadius: (theme) => theme.shape.borderRadius, 
-                borderBottomRightRadius: (theme) => theme.shape.borderRadius, 
-                bgcolor: 'background.paper',
-                flexWrap: isMobile ? 'wrap' : 'nowrap',
-                gap: 1
-            }}>
-                <IconButton 
-                    size="small" 
-                    component="label" 
-                    aria-label="attach file" 
-                    sx={{ color: 'text.secondary' }}
-                    disabled={files.length >= MAX_FILES}
-                >
-                    <AttachFileIcon fontSize="small" />
-                    <input 
-                        type="file" 
-                        hidden 
-                        multiple 
-                        accept="image/*,.pdf,.doc,.docx,.txt" 
-                        onChange={handleFileSelection}
-                    />
-                </IconButton>
-                <Stack direction="row" spacing={1} sx={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
-                    {(internalValue.trim() !== '' || files.length > 0) && onCancel && (
-                        <Button variant="outlined" onClick={onCancel} size="small">Cancel</Button>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    px: 1.5,
+                    py: 1.5,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.default',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                }}
+            >
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Tooltip title={`Attach files (${files.length}/${MAX_FILES})`} arrow placement="top">
+                        <span>
+                            <IconButton
+                                size="small"
+                                component="label"
+                                disabled={files.length >= MAX_FILES}
+                                sx={{
+                                    color: files.length >= MAX_FILES ? 'text.disabled' : 'text.secondary',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        bgcolor: 'action.hover',
+                                        color: 'primary.main',
+                                        transform: 'scale(1.1)',
+                                    }
+                                }}
+                            >
+                                <AttachFileIcon fontSize="small" />
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    hidden
+                                    multiple
+                                    accept="image/*,.pdf,.doc,.docx,.txt"
+                                    onChange={handleFileSelection}
+                                />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    <Tooltip title="Formatting options coming soon" arrow placement="top">
+                        <span>
+                            <IconButton
+                                size="small"
+                                disabled
+                                sx={{
+                                    color: 'text.disabled',
+                                    opacity: 0.5,
+                                }}
+                            >
+                                <EmojiIcon fontSize="small" />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+
+                    {!isMobile && hasContent && (
+                        <Fade in>
+                            <Chip
+                                label="Cmd/Ctrl + Enter"
+                                size="small"
+                                sx={{
+                                    height: 24,
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    bgcolor: 'action.selected',
+                                    color: 'text.secondary',
+                                    ml: 1,
+                                }}
+                            />
+                        </Fade>
                     )}
+                </Stack>
+
+                <Stack direction="row" spacing={1}>
+                    <Fade in={hasContent && !!onCancel}>
+                        <Button
+                            variant="outlined"
+                            onClick={onCancel}
+                            size={isMobile ? 'small' : 'medium'}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                px: 2.5,
+                                borderRadius: 1.5,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: 2,
+                                }
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                    </Fade>
                     <Button
                         variant="contained"
                         onClick={onSubmit}
-                        disabled={isSubmitting || (internalValue.trim() === '' && files.length === 0)}
-                        size="small"
+                        disabled={isSubmitting || !hasContent}
+                        size={isMobile ? 'small' : 'medium'}
+                        endIcon={isSubmitting ? null : <SendIcon sx={{ fontSize: 18 }} />}
+                        sx={{
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            px: 3,
+                            borderRadius: 1.5,
+                            boxShadow: 2,
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: 4,
+                            },
+                            '&:active': {
+                                transform: 'translateY(0)',
+                            },
+                            '&.Mui-disabled': {
+                                bgcolor: 'action.disabledBackground',
+                                color: 'action.disabled',
+                            }
+                        }}
                     >
-                        {isSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Comment'}
+                        {isSubmitting ? (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <CircularProgress size={18} color="inherit" />
+                                <span>Sending...</span>
+                            </Stack>
+                        ) : (
+                            'Comment'
+                        )}
                     </Button>
                 </Stack>
             </Box>

@@ -10,7 +10,7 @@ import {
     useMediaQuery,
 } from '@mui/material';
 
-import { addComment, updateComment, deleteComment } from '../../../api/issuesApi';
+import { addComment, updateComment, deleteComment, deleteAttachment } from '../../../api/issuesApi';
 import { showNotification } from '../../../state/notificationSlice';
 import DeleteConfirmationDialog from '../DeleteConfirmationDialog';
 import Comment from './Comment';
@@ -40,7 +40,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         }
     });
 
-    const { mutate: updateCommentMutation } = useMutation({
+    const { mutate: updateCommentMutation, isPending: isUpdatingComment } = useMutation({
         mutationFn: updateComment,
         onSuccess: () => {
             queryClient.invalidateQueries(['issue', issueId]);
@@ -62,7 +62,18 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
             dispatch(showNotification({ message: error.response?.data?.message || 'Failed to delete comment', severity: 'error' }));
         }
     });
-    
+
+    const { mutate: deleteAttachmentMutation, isPending: isDeletingAttachment } = useMutation({
+        mutationFn: deleteAttachment,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['issue', issueId]);
+            dispatch(showNotification({ message: 'Attachment deleted', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to delete attachment', severity: 'error' }));
+        }
+    });
+
     const handleAddComment = () => {
         if (newComment.trim() === '' && newCommentFiles.length === 0) return;
         const commentData = { text: newComment };
@@ -70,7 +81,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     };
 
     const handleReply = (parentCommentId, replyData) => {
-        addCommentMutation({ issueId, commentData: { ...replyData, parentId: parentCommentId }, files: replyData.files || [] });
+        addCommentMutation({ issueId, commentData: { text: replyData.text, parentId: parentCommentId }, files: replyData.files || [] });
     };
 
     const handleFileChange = (event) => {
@@ -83,26 +94,32 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     };
 
     const handleEditComment = (commentId, updateData) => {
-        updateCommentMutation({ issueId, commentId, ...updateData });
+        updateCommentMutation({ issueId, commentId, text: updateData.text });
     };
 
     const handleDeleteComment = (commentId) => {
         const findComment = (comments, id) => {
             for (const comment of comments) {
                 if (comment.id === id) return comment;
-                if (comment.replies) {
+                if (comment.replies && comment.replies.length > 0) {
                     const found = findComment(comment.replies, id);
                     if (found) return found;
                 }
             }
             return null;
         };
-        
-        const comment = findComment(issueComments, commentId);
-        setCommentToDelete(comment);
+        const comment = findComment(threadedComments, commentId);
+        if (comment) {
+            setCommentToDelete(comment);
+        }
+    };
+
+    const handleDeleteAttachment = (commentId, attachmentId) => {
+        deleteAttachmentMutation({ issueId, attachmentId });
     };
 
     const buildCommentTree = (comments) => {
+        if (!comments) return [];
         const commentMap = {};
         const rootComments = [];
 
@@ -111,10 +128,8 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         });
 
         comments.forEach(comment => {
-            if (comment.parentId) {
-                if (commentMap[comment.parentId]) {
-                    commentMap[comment.parentId].replies.push(commentMap[comment.id]);
-                }
+            if (comment.parentId && commentMap[comment.parentId]) {
+                commentMap[comment.parentId].replies.push(commentMap[comment.id]);
             } else {
                 rootComments.push(commentMap[comment.id]);
             }
@@ -127,19 +142,20 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
 
     return (
         <Box sx={{ px: { xs: 1, sm: 2 }, py: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, mb: 3, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                Comments ({issueComments.length})
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Comments ({issueComments?.length || 0})
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: isMobile ? 1 : 2, mb: 4 }}>
-                <Avatar sx={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, bgcolor: 'primary.main', boxShadow: 1 }}>
+            <Box sx={{ display: 'flex', gap: isMobile ? 1.5 : 2, mb: 4 }}>
+                <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>
                     {currentUser?.fullName?.[0]}
                 </Avatar>
-                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Box sx={{ flexGrow: 1 }}>
                     <CommentInput
                         value={newComment}
                         onChange={setNewComment}
                         onSubmit={handleAddComment}
+                        onCancel={() => { setNewComment(''); setNewCommentFiles([]); }}
                         currentUser={currentUser}
                         files={newCommentFiles}
                         onFileChange={handleFileChange}
@@ -151,9 +167,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
 
             {threadedComments.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-                    <Typography variant="body1" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
-                        No comments yet. Be the first to comment!
-                    </Typography>
+                    <Typography>No comments yet. Be the first to comment!</Typography>
                 </Box>
             ) : (
                 <Box sx={{ '& > *:not(:last-child)': { borderBottom: 1, borderColor: 'divider' } }}>
@@ -166,7 +180,10 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
                             onEdit={handleEditComment}
                             onDelete={handleDeleteComment}
                             onReply={handleReply}
-                            onDeleteAttachment={() => {}}
+                            onDeleteAttachment={handleDeleteAttachment}
+                            isUpdating={isUpdatingComment}
+                            isReplying={isAddingComment}
+                            isDeletingAttachment={deleteAttachmentMutation.isPending}
                             level={0}
                         />
                     ))}
