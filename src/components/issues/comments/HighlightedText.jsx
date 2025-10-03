@@ -4,54 +4,57 @@ import {
     Chip,
     Tooltip,
     Link,
+    Box,
 } from '@mui/material';
 import {
     Person as PersonIcon,
     Link as LinkIcon,
-    Tag as TagIcon,
 } from '@mui/icons-material';
 
+const truncateUrl = (url, max = 48) =>
+    url.length > max ? url.slice(0, max - 3) + '...' : url;
+
+const combinedRegex =
+    /(\[([^\]]+)\]\((\/people\/[^\)]+)\))|(@[a-zA-Z0-9_]+(?: [a-zA-Z0-9_]+)*)|(https?:\/\/[^\s]+)|(#\w+)/g;
+
 function HighlightedText({ text }) {
-    const mentionRegex = /@\[([^\]]+)\]/g;
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const hashtagRegex = /#(\w+)/g;
-    
     const parts = [];
     let lastIndex = 0;
-
-    const combinedRegex = new RegExp(
-        `(${mentionRegex.source})|(${urlRegex.source})|(${hashtagRegex.source})`,
-        'g'
-    );
-
     let match;
+
     while ((match = combinedRegex.exec(text)) !== null) {
         if (match.index > lastIndex) {
             parts.push({
                 type: 'text',
-                content: text.substring(lastIndex, match.index),
-                key: `text-${lastIndex}`
+                content: text.slice(lastIndex, match.index),
+                key: `text-${lastIndex}`,
             });
         }
 
         if (match[1]) {
-            const mentionMatch = /@\[([^\]]+)\]/.exec(match[0]);
             parts.push({
                 type: 'mention',
-                content: mentionMatch[1],
-                key: `mention-${match.index}`
+                content: match[2],
+                url: match[3],
+                key: `mention-${match.index}`,
             });
-        } else if (match[2]) {
+        } else if (match[4]) {
+            parts.push({
+                type: 'plainMention',
+                content: match[4].slice(1),
+                key: `plainMention-${match.index}`,
+            });
+        } else if (match[5]) {
             parts.push({
                 type: 'url',
-                content: match[0],
-                key: `url-${match.index}`
+                content: match[5],
+                key: `url-${match.index}`,
             });
-        } else if (match[3]) {
+        } else if (match[6]) {
             parts.push({
                 type: 'hashtag',
-                content: match[0],
-                key: `hashtag-${match.index}`
+                content: match[6],
+                key: `hashtag-${match.index}`,
             });
         }
 
@@ -61,8 +64,8 @@ function HighlightedText({ text }) {
     if (lastIndex < text.length) {
         parts.push({
             type: 'text',
-            content: text.substring(lastIndex),
-            key: `text-${lastIndex}`
+            content: text.slice(lastIndex),
+            key: `text-${lastIndex}`,
         });
     }
 
@@ -70,58 +73,71 @@ function HighlightedText({ text }) {
         switch (part.type) {
             case 'mention':
                 return (
-                    <Tooltip
-                        key={part.key}
-                        title={`Mentioned user: ${part.content}`}
-                        arrow
-                        placement="top"
-                        enterDelay={300}
-                    >
+                    <Tooltip key={part.key} title={`Mentioned user: ${part.content}`}>
                         <Chip
-                            icon={<PersonIcon sx={{ fontSize: 16 }} />}
+                            component="a"
+                            href={part.url}
+                            clickable
+                            icon={<PersonIcon sx={{ fontSize: 14 }} />}
+                            label={part.content}
+                            size="small"
+                            sx={{
+                                height: 22,
+                                bgcolor: 'rgba(82,153,255,0.15)',
+                                color: '#5299FF',
+                                fontWeight: 500,
+                                fontSize: 13,
+                                border: '1px solid rgba(82,153,255,0.3)',
+                                mx: 0.25,
+                                my: 0.25,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                '& .MuiChip-label': { px: 1 },
+                                '& .MuiChip-icon': { ml: 0.5, color: '#5299FF' },
+                                '&:hover': {
+                                    bgcolor: 'rgba(82,153,255,0.25)',
+                                    borderColor: '#5299FF',
+                                },
+                            }}
+                            tabIndex={0}
+                            aria-label={`Mentioned user: ${part.content}`}
+                        />
+                    </Tooltip>
+                );
+
+            case 'plainMention':
+                return (
+                    <Tooltip key={part.key} title={`Mentioned user: ${part.content}`}>
+                        <Chip
                             label={`@${part.content}`}
                             size="small"
                             sx={{
-                                bgcolor: 'primary.lighter',
-                                color: 'primary.dark',
-                                fontWeight: 600,
-                                height: 26,
-                                mx: 0.5,
+                                height: 22,
+                                bgcolor: 'rgba(82,153,255,0.15)',
+                                color: '#5299FF',
+                                fontWeight: 500,
+                                fontSize: 13,
+                                border: '1px solid rgba(82,153,255,0.3)',
+                                mx: 0.25,
                                 my: 0.25,
-                                border: 1.5,
-                                borderColor: 'primary.main',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                '& .MuiChip-label': { px: 1.5 },
-                                '& .MuiChip-icon': { ml: 1, color: 'primary.main' },
+                                transition: 'all 0.15s',
+                                '& .MuiChip-label': { px: 1 },
+                                '& .MuiChip-icon': { ml: 0.5, color: '#5299FF' },
                                 '&:hover': {
-                                    bgcolor: 'primary.main',
-                                    color: 'primary.contrastText',
-                                    transform: 'translateY(-1px)',
-                                    boxShadow: 2,
-                                    '& .MuiChip-icon': { color: 'inherit' },
-                                },
-                                '&:active': {
-                                    transform: 'translateY(0)',
+                                    bgcolor: 'rgba(82,153,255,0.25)',
+                                    borderColor: '#5299FF',
                                 },
                             }}
+                            tabIndex={0}
+                            aria-label={`Mentioned user: ${part.content}`}
                         />
                     </Tooltip>
                 );
 
             case 'url':
-                const displayUrl = part.content.length > 40 
-                    ? part.content.substring(0, 37) + '...' 
-                    : part.content;
-                
                 return (
-                    <Tooltip
-                        key={part.key}
-                        title="Click to open link"
-                        arrow
-                        placement="top"
-                        enterDelay={300}
-                    >
+                    <Tooltip key={part.key} title={part.content}>
                         <Link
                             href={part.content}
                             target="_blank"
@@ -130,87 +146,92 @@ function HighlightedText({ text }) {
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 0.5,
-                                color: 'info.main',
-                                fontWeight: 600,
+                                color: '#5299FF',
+                                fontWeight: 400,
                                 textDecoration: 'none',
-                                borderBottom: 2,
-                                borderColor: 'info.lighter',
-                                px: 0.5,
+                                borderBottom: '1px solid rgba(82,153,255,0.4)',
                                 mx: 0.25,
-                                borderRadius: 0.5,
-                                transition: 'all 0.2s',
+                                my: 0.25,
+                                transition: 'all 0.15s',
                                 '&:hover': {
-                                    bgcolor: 'info.lighter',
-                                    borderColor: 'info.main',
-                                    transform: 'translateY(-1px)',
+                                    color: '#4080D0',
+                                    borderBottomColor: '#4080D0',
                                 },
+                                maxWidth: 220,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                             }}
+                            tabIndex={0}
+                            aria-label={`External link: ${part.content}`}
                         >
                             <LinkIcon sx={{ fontSize: 14 }} />
-                            {displayUrl}
+                            {truncateUrl(part.content)}
                         </Link>
                     </Tooltip>
                 );
 
             case 'hashtag':
                 return (
-                    <Tooltip
-                        key={part.key}
-                        title="Hashtag"
-                        arrow
-                        placement="top"
-                        enterDelay={300}
-                    >
+                    <Tooltip key={part.key} title="Hashtag">
                         <Chip
-                            icon={<TagIcon sx={{ fontSize: 14 }} />}
                             label={part.content}
                             size="small"
                             sx={{
-                                bgcolor: 'success.lighter',
-                                color: 'success.dark',
-                                fontWeight: 600,
-                                height: 24,
-                                mx: 0.5,
+                                height: 22,
+                                bgcolor: 'rgba(63,185,80,0.15)',
+                                color: '#3fb950',
+                                fontWeight: 500,
+                                fontSize: 13,
+                                border: '1px solid rgba(63,185,80,0.3)',
+                                mx: 0.25,
                                 my: 0.25,
-                                border: 1.5,
-                                borderColor: 'success.main',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                '& .MuiChip-label': { px: 1.5 },
-                                '& .MuiChip-icon': { ml: 0.75, color: 'success.main' },
+                                transition: 'all 0.15s',
+                                '& .MuiChip-label': { px: 1 },
+                                '& .MuiChip-icon': { ml: 0.5, color: '#3fb950' },
                                 '&:hover': {
-                                    bgcolor: 'success.main',
-                                    color: 'success.contrastText',
-                                    transform: 'translateY(-1px)',
-                                    boxShadow: 2,
-                                    '& .MuiChip-icon': { color: 'inherit' },
-                                },
-                                '&:active': {
-                                    transform: 'translateY(0)',
+                                    bgcolor: 'rgba(63,185,80,0.25)',
+                                    borderColor: '#3fb950',
                                 },
                             }}
+                            tabIndex={0}
+                            aria-label={`Hashtag: ${part.content}`}
                         />
                     </Tooltip>
                 );
 
             case 'text':
             default:
-                return <span key={part.key}>{part.content}</span>;
+                return (
+                    <Box
+                        key={part.key}
+                        component="span"
+                        sx={{
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                        }}
+                    >
+                        {part.content}
+                    </Box>
+                );
         }
     };
 
     return (
         <Typography
-            variant="body1"
             component="div"
             sx={{
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
-                lineHeight: 1.7,
-                fontSize: { xs: '0.9375rem', sm: '1rem' },
-                color: 'text.primary',
+                lineHeight: 1.5,
+                fontSize: 14,
+                color: '#E6EDF2',
                 '& a, & .MuiChip-root': {
                     verticalAlign: 'middle',
+                },
+                '& .MuiChip-root': {
+                    maxWidth: 220,
                 },
             }}
         >

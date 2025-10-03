@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import {
     Avatar,
@@ -10,47 +10,108 @@ import {
     ListItemText,
     Typography,
     Box,
-    Fade,
-    Chip,
     CircularProgress,
     Divider,
+    Fade,
+    InputBase,
+    Stack,
 } from '@mui/material';
 import {
     Search as SearchIcon,
     Person as PersonIcon,
-    CheckCircle as CheckCircleIcon,
+    Add as AddIcon,
+    ErrorOutline as ErrorIcon,
 } from '@mui/icons-material';
 
 import { useUsers } from '../../../hooks/useLookups';
 
-function UserMentionAutocomplete({ anchorEl, searchQuery, onSelectUser, onClose }) {
-    const { data: users, isLoading } = useUsers();
-    const [selectedIndex, setSelectedIndex] = useState(0);
-    const [hoveredIndex, setHoveredIndex] = useState(null);
-
-    const filteredUsers = (users || []).filter(user =>
-        user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.userName.toLowerCase().includes(searchQuery.toLowerCase())
+function highlightMatch(text, query) {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+            <Box
+                key={i}
+                component="span"
+                sx={{
+                    bgcolor: '#5299FF',
+                    color: '#fff',
+                    px: 0.5,
+                    borderRadius: '3px',
+                    fontWeight: 600,
+                }}
+            >
+                {part}
+            </Box>
+        ) : (
+            part
+        )
     );
+}
+
+function UserMentionAutocomplete({
+    anchorEl,
+    searchQuery = '',
+    onSelectUser,
+    onClose,
+}) {
+    const { data: users, isLoading, isError } = useUsers();
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [freeSoloValue, setFreeSoloValue] = useState('');
+    const listRef = useRef(null);
+
+    const filteredUsers = (users || []).filter(
+        (user) =>
+            user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.userName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const allowFreeSolo =
+        searchQuery.trim().length > 0 &&
+        !filteredUsers.some(
+            (user) =>
+                user.fullName.toLowerCase() === searchQuery.toLowerCase() ||
+                user.userName.toLowerCase() === searchQuery.toLowerCase()
+        );
 
     useEffect(() => {
         setSelectedIndex(0);
-    }, [searchQuery]);
+        setFreeSoloValue(searchQuery);
+    }, [searchQuery, anchorEl]);
 
     useEffect(() => {
+        if (!anchorEl) return;
+
         const handleKeyDown = (e) => {
-            if (!anchorEl || filteredUsers.length === 0) return;
+            if (!anchorEl) return;
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                setSelectedIndex(prev => (prev + 1) % filteredUsers.length);
+                setSelectedIndex((prev) =>
+                    prev + 1 < filteredUsers.length + (allowFreeSolo ? 1 : 0)
+                        ? prev + 1
+                        : 0
+                );
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                setSelectedIndex(prev => (prev - 1 + filteredUsers.length) % filteredUsers.length);
+                setSelectedIndex((prev) =>
+                    prev - 1 < 0
+                        ? filteredUsers.length + (allowFreeSolo ? 1 : 0) - 1
+                        : prev - 1
+                );
             } else if (e.key === 'Enter' || e.key === 'Tab') {
                 if (filteredUsers[selectedIndex]) {
                     e.preventDefault();
                     onSelectUser(filteredUsers[selectedIndex]);
+                } else if (allowFreeSolo && selectedIndex === filteredUsers.length) {
+                    e.preventDefault();
+                    onSelectUser({
+                        id: null,
+                        fullName: freeSoloValue,
+                        userName: freeSoloValue,
+                        avatarUrl: null,
+                        isFreeSolo: true,
+                    });
                 }
             } else if (e.key === 'Escape') {
                 e.preventDefault();
@@ -60,102 +121,21 @@ function UserMentionAutocomplete({ anchorEl, searchQuery, onSelectUser, onClose 
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [anchorEl, filteredUsers, selectedIndex, onSelectUser, onClose]);
+    }, [anchorEl, filteredUsers, selectedIndex, allowFreeSolo, freeSoloValue, onSelectUser, onClose]);
 
-    const highlightMatch = (text, query) => {
-        if (!query) return text;
-        
-        const parts = text.split(new RegExp(`(${query})`, 'gi'));
-        return parts.map((part, index) => 
-            part.toLowerCase() === query.toLowerCase() ? (
-                <Box
-                    key={index}
-                    component="span"
-                    sx={{
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        px: 0.5,
-                        borderRadius: 0.5,
-                        fontWeight: 700,
-                    }}
-                >
-                    {part}
-                </Box>
-            ) : part
-        );
-    };
+    useEffect(() => {
+        if (listRef.current) {
+            const item = listRef.current.querySelector(
+                `[data-index="${selectedIndex}"]`
+            );
+            if (item) item.scrollIntoView({ block: 'nearest' });
+        }
+    }, [selectedIndex]);
+
+    const minWidth = 320;
+    const maxWidth = 420;
 
     if (!anchorEl) return null;
-
-    if (isLoading) {
-        return (
-            <Popper
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                placement="bottom-start"
-                style={{ zIndex: 1500 }}
-                modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
-                transition
-            >
-                {({ TransitionProps }) => (
-                    <Fade {...TransitionProps} timeout={200}>
-                        <Paper
-                            elevation={12}
-                            sx={{
-                                minWidth: { xs: 280, sm: 320 },
-                                border: 2,
-                                borderColor: 'primary.light',
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                                <CircularProgress size={32} thickness={4} />
-                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                    Loading users...
-                                </Typography>
-                            </Box>
-                        </Paper>
-                    </Fade>
-                )}
-            </Popper>
-        );
-    }
-
-    if (filteredUsers.length === 0) {
-        return (
-            <Popper
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                placement="bottom-start"
-                style={{ zIndex: 1500 }}
-                modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
-                transition
-            >
-                {({ TransitionProps }) => (
-                    <Fade {...TransitionProps} timeout={200}>
-                        <Paper
-                            elevation={12}
-                            sx={{
-                                minWidth: { xs: 280, sm: 320 },
-                                border: 2,
-                                borderColor: 'divider',
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                                <SearchIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
-                                <Typography variant="body2" color="text.secondary" fontWeight={500} textAlign="center">
-                                    No users found matching "{searchQuery}"
-                                </Typography>
-                            </Box>
-                        </Paper>
-                    </Fade>
-                )}
-            </Popper>
-        );
-    }
 
     return (
         <Popper
@@ -163,206 +143,363 @@ function UserMentionAutocomplete({ anchorEl, searchQuery, onSelectUser, onClose 
             anchorEl={anchorEl}
             placement="bottom-start"
             style={{ zIndex: 1500 }}
-            modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
-            transition
+            modifiers={[
+                { name: 'offset', options: { offset: [0, 4] } },
+                { name: 'preventOverflow', options: { altAxis: true, tether: true } },
+            ]}
         >
-            {({ TransitionProps }) => (
-                <Fade {...TransitionProps} timeout={200}>
-                    <Paper
-                        elevation={12}
+            <Fade in>
+                <Paper
+                    elevation={8}
+                    sx={{
+                        minWidth: { xs: '90vw', sm: minWidth },
+                        maxWidth: maxWidth,
+                        bgcolor: '#282E33',
+                        border: '1px solid #373E47',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: 340,
+                        width: '100%',
+                    }}
+                >
+                    {/* Header */}
+                    <Box
                         sx={{
-                            maxHeight: 320,
-                            overflow: 'hidden',
-                            minWidth: { xs: 300, sm: 360 },
-                            border: 2,
-                            borderColor: 'primary.light',
-                            borderRadius: 2,
+                            px: 1.5,
+                            py: 1,
+                            bgcolor: '#1D2125',
+                            borderBottom: '1px solid #373E47',
                             display: 'flex',
-                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 1,
                         }}
                     >
-                        {/* Header */}
+                        <PersonIcon sx={{ fontSize: 16, color: '#7D858D' }} />
+                        <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 500, color: '#E6EDF2', fontSize: 12 }}
+                        >
+                            Mention user
+                        </Typography>
+                        <Typography
+                            variant="caption"
+                            sx={{ ml: 'auto', color: '#7D858D', fontSize: 11 }}
+                        >
+                            {filteredUsers.length}
+                            {filteredUsers.length === 1 ? ' user' : ' users'}
+                        </Typography>
+                    </Box>
+
+                    {/* Loading/Error/Empty */}
+                    {isLoading ? (
                         <Box
                             sx={{
-                                px: 2,
-                                py: 1.5,
-                                bgcolor: 'primary.main',
-                                color: 'primary.contrastText',
+                                p: 3,
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
-                                justifyContent: 'space-between',
                                 gap: 1,
                             }}
                         >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <PersonIcon sx={{ fontSize: 20 }} />
-                                <Typography variant="body2" fontWeight={700}>
-                                    Mention User
-                                </Typography>
-                            </Box>
-                            <Chip
-                                label={`${filteredUsers.length} ${filteredUsers.length === 1 ? 'user' : 'users'}`}
-                                size="small"
-                                sx={{
-                                    height: 22,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                                    color: 'inherit',
-                                    '& .MuiChip-label': { px: 1 },
-                                }}
-                            />
+                            <CircularProgress size={24} thickness={3} sx={{ color: '#5299FF' }} />
+                            <Typography
+                                variant="body2"
+                                sx={{ color: '#7D858D', fontSize: 13 }}
+                            >
+                                Loading users...
+                            </Typography>
                         </Box>
-
-                        {/* User List */}
-                        <List
-                            dense
-                            disablePadding
+                    ) : isError ? (
+                        <Box
                             sx={{
-                                overflow: 'auto',
-                                flexGrow: 1,
-                                '&::-webkit-scrollbar': {
-                                    width: 8,
-                                },
-                                '&::-webkit-scrollbar-track': {
-                                    bgcolor: 'action.hover',
-                                },
-                                '&::-webkit-scrollbar-thumb': {
-                                    bgcolor: 'primary.main',
-                                    borderRadius: 1,
-                                    '&:hover': {
-                                        bgcolor: 'primary.dark',
-                                    }
-                                }
+                                p: 3,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 1,
                             }}
                         >
-                            {filteredUsers.map((user, index) => {
-                                const isSelected = index === selectedIndex;
-                                const isHovered = index === hoveredIndex;
-                                
-                                return (
-                                    <Box key={user.id}>
+                            <ErrorIcon sx={{ fontSize: 32, color: '#f85149' }} />
+                            <Typography
+                                variant="body2"
+                                sx={{ color: '#f85149', fontSize: 13, textAlign: 'center' }}
+                            >
+                                Failed to load users.
+                            </Typography>
+                        </Box>
+                    ) : filteredUsers.length === 0 && !allowFreeSolo ? (
+                        <Box
+                            sx={{
+                                p: 3,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 1,
+                            }}
+                        >
+                            <SearchIcon sx={{ fontSize: 32, color: '#7D858D' }} />
+                            <Typography
+                                variant="body2"
+                                sx={{ color: '#7D858D', fontSize: 13, textAlign: 'center' }}
+                            >
+                                No users found matching "{searchQuery}"
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <>
+                            {/* User List */}
+                            <List
+                                dense
+                                disablePadding
+                                ref={listRef}
+                                sx={{
+                                    overflowY: 'auto',
+                                    flexGrow: 1,
+                                    maxHeight: { xs: 220, sm: 240 },
+                                    '&::-webkit-scrollbar': {
+                                        width: 6,
+                                    },
+                                    '&::-webkit-scrollbar-thumb': {
+                                        bgcolor: '#373E47',
+                                        borderRadius: '3px',
+                                    },
+                                }}
+                                role="listbox"
+                                aria-label="Mention user list"
+                            >
+                                {filteredUsers.map((user, idx) => {
+                                    const isSelected = idx === selectedIndex;
+                                    return (
+                                        <Box key={user.id || user.userName}>
+                                            <ListItem
+                                                button
+                                                selected={isSelected}
+                                                data-index={idx}
+                                                onClick={() => onSelectUser(user)}
+                                                onMouseEnter={() => setSelectedIndex(idx)}
+                                                sx={{
+                                                    py: 1,
+                                                    px: 1.5,
+                                                    bgcolor: isSelected ? '#373E47' : 'transparent',
+                                                    borderLeft: '2px solid',
+                                                    borderColor: isSelected ? '#5299FF' : 'transparent',
+                                                    transition: 'all 0.15s',
+                                                    '&:hover': {
+                                                        bgcolor: '#373E47',
+                                                    },
+                                                }}
+                                                role="option"
+                                                aria-selected={isSelected}
+                                            >
+                                                <ListItemAvatar sx={{ minWidth: 40 }}>
+                                                    <Avatar
+                                                        src={user.avatarUrl}
+                                                        sx={{
+                                                            width: 28,
+                                                            height: 28,
+                                                            bgcolor: '#5299FF',
+                                                            fontSize: 13,
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        {user.fullName?.charAt(0)?.toUpperCase() || <PersonIcon />}
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                fontWeight: 500,
+                                                                fontSize: 13,
+                                                                color: '#E6EDF2',
+                                                                maxWidth: 180,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {highlightMatch(user.fullName, searchQuery)}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
+                                                                fontSize: 12,
+                                                                color: '#7D858D',
+                                                                maxWidth: 120,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            @{highlightMatch(user.userName, searchQuery)}
+                                                        </Typography>
+                                                    }
+                                                />
+                                            </ListItem>
+                                            {idx < filteredUsers.length - 1 && (
+                                                <Divider sx={{ borderColor: '#373E47', ml: 7 }} />
+                                            )}
+                                        </Box>
+                                    );
+                                })}
+                                {/* Free solo option */}
+                                {allowFreeSolo && (
+                                    <Box>
                                         <ListItem
                                             button
-                                            onClick={() => onSelectUser(user)}
-                                            onMouseEnter={() => {
-                                                setHoveredIndex(index);
-                                                setSelectedIndex(index);
-                                            }}
-                                            onMouseLeave={() => setHoveredIndex(null)}
+                                            selected={selectedIndex === filteredUsers.length}
+                                            data-index={filteredUsers.length}
+                                            onClick={() =>
+                                                onSelectUser({
+                                                    id: null,
+                                                    fullName: freeSoloValue,
+                                                    userName: freeSoloValue,
+                                                    avatarUrl: null,
+                                                    isFreeSolo: true,
+                                                })
+                                            }
+                                            onMouseEnter={() => setSelectedIndex(filteredUsers.length)}
                                             sx={{
-                                                py: 1.5,
-                                                px: 2,
-                                                bgcolor: isSelected ? 'primary.lighter' : 'transparent',
-                                                borderLeft: 4,
-                                                borderColor: isSelected ? 'primary.main' : 'transparent',
-                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                transform: isHovered ? 'translateX(4px)' : 'translateX(0)',
+                                                py: 1,
+                                                px: 1.5,
+                                                bgcolor:
+                                                    selectedIndex === filteredUsers.length
+                                                        ? '#373E47'
+                                                        : 'transparent',
+                                                borderLeft: '2px solid',
+                                                borderColor:
+                                                    selectedIndex === filteredUsers.length
+                                                        ? '#5299FF'
+                                                        : 'transparent',
+                                                transition: 'all 0.15s',
                                                 '&:hover': {
-                                                    bgcolor: 'primary.lighter',
+                                                    bgcolor: '#373E47',
                                                 },
                                             }}
+                                            role="option"
+                                            aria-selected={selectedIndex === filteredUsers.length}
                                         >
-                                            <ListItemAvatar>
+                                            <ListItemAvatar sx={{ minWidth: 40 }}>
                                                 <Avatar
                                                     sx={{
-                                                        width: 42,
-                                                        height: 42,
-                                                        bgcolor: 'primary.main',
-                                                        fontSize: 18,
-                                                        fontWeight: 700,
-                                                        boxShadow: isSelected ? 3 : 1,
-                                                        transition: 'all 0.2s',
-                                                        transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                                                        width: 28,
+                                                        height: 28,
+                                                        bgcolor: '#7D858D',
+                                                        fontSize: 13,
+                                                        fontWeight: 600,
                                                     }}
                                                 >
-                                                    {user.fullName.charAt(0)}
+                                                    <AddIcon sx={{ fontSize: 18 }} />
                                                 </Avatar>
                                             </ListItemAvatar>
                                             <ListItemText
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant="body2" fontWeight={600} fontSize="0.95rem">
-                                                            {highlightMatch(user.fullName, searchQuery)}
+                                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                fontWeight: 500,
+                                                                fontSize: 13,
+                                                                color: '#E6EDF2',
+                                                                maxWidth: 180,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            Mention <b>{freeSoloValue}</b>
                                                         </Typography>
-                                                        {isSelected && (
-                                                            <CheckCircleIcon
-                                                                sx={{
-                                                                    fontSize: 16,
-                                                                    color: 'primary.main',
-                                                                    animation: 'fadeIn 0.2s ease-in',
-                                                                    '@keyframes fadeIn': {
-                                                                        from: { opacity: 0, transform: 'scale(0)' },
-                                                                        to: { opacity: 1, transform: 'scale(1)' },
-                                                                    }
-                                                                }}
-                                                            />
-                                                        )}
-                                                    </Box>
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
+                                                                color: '#5299FF',
+                                                                fontWeight: 600,
+                                                                fontSize: 11,
+                                                                ml: 1,
+                                                            }}
+                                                        >
+                                                            (custom)
+                                                        </Typography>
+                                                    </Stack>
                                                 }
                                                 secondary={
-                                                    <Typography variant="caption" fontSize="0.85rem" color="text.secondary">
-                                                        @{highlightMatch(user.userName, searchQuery)}
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            fontSize: 12,
+                                                            color: '#7D858D',
+                                                        }}
+                                                    >
+                                                        Add as a free-form mention
                                                     </Typography>
                                                 }
                                             />
                                         </ListItem>
-                                        {index < filteredUsers.length - 1 && (
-                                            <Divider sx={{ opacity: 0.5 }} />
-                                        )}
                                     </Box>
-                                );
-                            })}
-                        </List>
-
-                        {/* Footer with keyboard hints */}
-                        <Box
-                            sx={{
-                                px: 2,
-                                py: 1,
-                                bgcolor: 'action.hover',
-                                borderTop: 1,
-                                borderColor: 'divider',
-                                display: 'flex',
-                                gap: 1.5,
-                                flexWrap: 'wrap',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <Chip
-                                label="↑↓ Navigate"
-                                size="small"
+                                )}
+                            </List>
+                            {/* Footer with keyboard hints */}
+                            <Box
                                 sx={{
-                                    height: 22,
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    bgcolor: 'background.paper',
+                                    px: 1.5,
+                                    py: 0.75,
+                                    bgcolor: '#1D2125',
+                                    borderTop: '1px solid #373E47',
+                                    display: 'flex',
+                                    gap: 1,
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'center',
                                 }}
-                            />
-                            <Chip
-                                label="↵ Select"
-                                size="small"
-                                sx={{
-                                    height: 22,
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    bgcolor: 'background.paper',
-                                }}
-                            />
-                            <Chip
-                                label="Esc Close"
-                                size="small"
-                                sx={{
-                                    height: 22,
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    bgcolor: 'background.paper',
-                                }}
-                            />
-                        </Box>
-                    </Paper>
-                </Fade>
-            )}
+                            >
+                                <Box
+                                    sx={{
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: '3px',
+                                        bgcolor: '#373E47',
+                                        fontSize: 10,
+                                        fontWeight: 500,
+                                        color: '#7D858D',
+                                    }}
+                                >
+                                    ↑↓ Navigate
+                                </Box>
+                                <Box
+                                    sx={{
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: '3px',
+                                        bgcolor: '#373E47',
+                                        fontSize: 10,
+                                        fontWeight: 500,
+                                        color: '#7D858D',
+                                    }}
+                                >
+                                    ↵ Select
+                                </Box>
+                                <Box
+                                    sx={{
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: '3px',
+                                        bgcolor: '#373E47',
+                                        fontSize: 10,
+                                        fontWeight: 500,
+                                        color: '#7D858D',
+                                    }}
+                                >
+                                    Esc Close
+                                </Box>
+                            </Box>
+                        </>
+                    )}
+                </Paper>
+            </Fade>
         </Popper>
     );
 }

@@ -4,26 +4,47 @@ import {
     Box,
     Typography,
     IconButton,
+    Tooltip,
     Grid,
     Dialog,
     DialogContent,
-    useTheme,
-    useMediaQuery,
-    CircularProgress,
-    Tooltip,
-    Fade,
-    Zoom,
-    Chip,
     Stack,
+    CircularProgress,
+    Fade,
 } from '@mui/material';
 import {
     Close as CloseIcon,
     InsertDriveFile as FileIcon,
     BrokenImage as BrokenImageIcon,
-    ZoomIn as ZoomInIcon,
     Download as DownloadIcon,
     Image as ImageIcon,
+    Delete as DeleteIcon,
 } from '@mui/icons-material';
+
+const fileTypeIcon = (fileType, fileName) => {
+    if (fileType && fileType.startsWith('image/')) return <ImageIcon sx={{ color: '#7D858D', fontSize: 28 }} />;
+    const ext = (fileName || '').split('.').pop()?.toLowerCase();
+    return <FileIcon sx={{ color: '#7D858D', fontSize: 28 }} />;
+};
+
+const isImage = (fileType, fileName) => {
+    if (fileType) return fileType.startsWith('image/');
+    return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(fileName || '');
+};
+
+const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+};
+
+const truncateFileName = (name, max = 28) => {
+    if (!name) return '';
+    if (name.length <= max) return name;
+    const ext = name.includes('.') ? '.' + name.split('.').pop() : '';
+    return name.slice(0, max - ext.length - 3) + '...' + ext;
+};
 
 function AttachmentList({ attachments, onDelete, canDelete = false }) {
     const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -31,11 +52,7 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
     const [selectedImageName, setSelectedImageName] = useState('');
     const [loadingStates, setLoadingStates] = useState({});
     const [errorStates, setErrorStates] = useState({});
-    const [hoveredIndex, setHoveredIndex] = useState(null);
     const urlMapRef = useRef(new Map());
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
         const urls = Array.from(urlMapRef.current.values());
@@ -46,17 +63,6 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
     }, []);
 
     if (!attachments || attachments.length === 0) return null;
-
-    const isImage = (fileType, fileName) => {
-        if (fileType) return fileType.startsWith('image/');
-        return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(fileName || '');
-    };
-
-    const handleImageClick = (url, filename) => {
-        setSelectedImage(url);
-        setSelectedImageName(filename);
-        setLightboxOpen(true);
-    };
 
     const getAttachmentUrl = (attachment) => {
         if (attachment.url) return attachment.url;
@@ -70,13 +76,10 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
         return '';
     };
 
-    const handleLoad = (index) => {
-        setLoadingStates(prev => ({ ...prev, [index]: false }));
-    };
-
-    const handleError = (index) => {
-        setLoadingStates(prev => ({ ...prev, [index]: false }));
-        setErrorStates(prev => ({ ...prev, [index]: true }));
+    const handleImageClick = (url, filename) => {
+        setSelectedImage(url);
+        setSelectedImageName(filename);
+        setLightboxOpen(true);
     };
 
     const handleDownload = (url, filename) => {
@@ -88,229 +91,245 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
         document.body.removeChild(link);
     };
 
-    const formatFileSize = (bytes) => {
-        if (!bytes) return '';
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+    const handleLoad = (index) => {
+        setLoadingStates(prev => ({ ...prev, [index]: false }));
     };
 
-    const getFileExtension = (filename) => {
-        const ext = filename.split('.').pop()?.toUpperCase();
-        return ext && ext.length <= 4 ? ext : 'FILE';
+    const handleError = (index) => {
+        setLoadingStates(prev => ({ ...prev, [index]: false }));
+        setErrorStates(prev => ({ ...prev, [index]: true }));
     };
-
-    const thumbnailSize = isMobile ? 100 : isTablet ? 120 : 140;
 
     return (
         <>
-            <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                {attachments.map((attachment, index) => {
-                    const url = getAttachmentUrl(attachment);
-                    const filename = attachment.fileName || attachment.name || 'file';
-                    const filetype = attachment.fileType || attachment.type;
-                    const filesize = attachment.size || attachment.fileSize;
-                    const isImg = isImage(filetype, filename);
+            <Box sx={{ mt: 1 }}>
+                <Grid container spacing={1.5}>
+                    {attachments.map((attachment, index) => {
+                        const url = getAttachmentUrl(attachment);
+                        const filename = attachment.fileName || attachment.name || 'file';
+                        const filetype = attachment.fileType || attachment.type;
+                        const filesize = attachment.size || attachment.fileSize;
+                        const isImg = isImage(filetype, filename);
 
-                    return (
-                        <Grid item key={attachment.id || index} xs={6} sm={4} md={3} lg={2}>
-                            <Zoom in timeout={300} style={{ transitionDelay: `${index * 50}ms` }}>
+                        return (
+                            <Grid item key={attachment.id || index} xs={6} sm={4} md={3} lg={2}>
                                 <Box
-                                    sx={{ position: 'relative' }}
-                                    onMouseEnter={() => setHoveredIndex(index)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
+                                    sx={{
+                                        position: 'relative',
+                                        height: 112,
+                                        borderRadius: 2,
+                                        overflow: 'hidden',
+                                        bgcolor: '#23272F',
+                                        border: '1px solid #373E47',
+                                        transition: 'box-shadow 0.2s, border-color 0.2s',
+                                        '&:hover': {
+                                            borderColor: '#5299FF',
+                                            boxShadow: '0 0 0 2px #5299FF',
+                                        },
+                                    }}
                                 >
-                                    {canDelete && (
-                                        <Tooltip title="Remove" arrow placement="top">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => onDelete(attachment)}
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: -8,
-                                                    right: -8,
-                                                    zIndex: 10,
-                                                    bgcolor: 'error.main',
-                                                    color: 'white',
-                                                    width: 32,
-                                                    height: 32,
-                                                    boxShadow: 3,
-                                                    opacity: hoveredIndex === index ? 1 : 0.85,
-                                                    transform: hoveredIndex === index ? 'scale(1.1)' : 'scale(1)',
-                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    '&:hover': {
-                                                        bgcolor: 'error.dark',
-                                                        boxShadow: 4,
-                                                        transform: 'scale(1.15)',
-                                                    }
-                                                }}
-                                            >
-                                                <CloseIcon sx={{ fontSize: 18 }} />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
+                                    {/* Overlay actions on hover */}
+                                    <Fade in={canDelete || true}>
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                pointerEvents: 'none',
+                                                zIndex: 2,
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 0.5 }}>
+                                                {canDelete && (
+                                                    <Tooltip title="Delete" arrow>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => onDelete(attachment)}
+                                                            sx={{
+                                                                pointerEvents: 'auto',
+                                                                bgcolor: 'rgba(40,46,51,0.85)',
+                                                                color: '#f85149',
+                                                                '&:hover': { bgcolor: '#f85149', color: '#fff' },
+                                                                m: 0,
+                                                                p: '2px',
+                                                            }}
+                                                        >
+                                                            <DeleteIcon sx={{ fontSize: 18 }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 0.5 }}>
+                                                <Tooltip title="Download" arrow>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDownload(url, filename)}
+                                                        sx={{
+                                                            pointerEvents: 'auto',
+                                                            bgcolor: 'rgba(40,46,51,0.85)',
+                                                            color: '#E6EDF2',
+                                                            '&:hover': { bgcolor: '#5299FF', color: '#fff' },
+                                                            m: 0,
+                                                            p: '2px',
+                                                        }}
+                                                    >
+                                                        <DownloadIcon sx={{ fontSize: 18 }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </Box>
+                                    </Fade>
 
+                                    {/* File/Image preview */}
                                     {isImg ? (
                                         <Box
                                             sx={{
-                                                position: 'relative',
-                                                height: thumbnailSize,
                                                 width: '100%',
-                                                borderRadius: 2.5,
-                                                overflow: 'hidden',
-                                                border: 2,
-                                                borderColor: hoveredIndex === index ? 'primary.main' : 'divider',
-                                                boxShadow: hoveredIndex === index ? 6 : 2,
-                                                bgcolor: 'grey.900',
-                                                cursor: 'pointer',
-                                                transform: hoveredIndex === index ? 'translateY(-4px)' : 'translateY(0)',
-                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                height: '100%',
+                                                cursor: errorStates[index] ? 'not-allowed' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                bgcolor: '#23272F',
+                                                position: 'relative',
                                             }}
                                             onClick={() => !errorStates[index] && handleImageClick(url, filename)}
                                         >
                                             {loadingStates[index] !== false && (
-                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.3)' }}>
-                                                    <CircularProgress size={32} thickness={4} />
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: '#23272F',
+                                                    }}
+                                                >
+                                                    <CircularProgress size={24} thickness={3} sx={{ color: '#5299FF' }} />
                                                 </Box>
                                             )}
-
                                             {errorStates[index] ? (
-                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                                    <BrokenImageIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
-                                                    <Typography variant="caption" color="text.secondary">
+                                                <Box
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: 0.5,
+                                                    }}
+                                                >
+                                                    <BrokenImageIcon sx={{ fontSize: 32, color: '#7D858D' }} />
+                                                    <Typography variant="caption" sx={{ color: '#7D858D', fontSize: 10 }}>
                                                         Failed to load
                                                     </Typography>
                                                 </Box>
                                             ) : (
-                                                <>
-                                                    <Box
-                                                        component="img"
-                                                        src={url}
-                                                        alt={filename}
-                                                        onLoad={() => handleLoad(index)}
-                                                        onError={() => handleError(index)}
-                                                        sx={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                            display: loadingStates[index] === false ? 'block' : 'none'
-                                                        }}
-                                                    />
-                                                    <Fade in={hoveredIndex === index}>
-                                                        <Box
-                                                            sx={{
-                                                                position: 'absolute',
-                                                                inset: 0,
-                                                                bgcolor: 'rgba(0,0,0,0.5)',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                backdropFilter: 'blur(2px)',
-                                                            }}
-                                                        >
-                                                            <ZoomInIcon sx={{ fontSize: 40, color: 'white' }} />
-                                                        </Box>
-                                                    </Fade>
-                                                </>
+                                                <Box
+                                                    component="img"
+                                                    src={url}
+                                                    alt={filename}
+                                                    onLoad={() => handleLoad(index)}
+                                                    onError={() => handleError(index)}
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        display: loadingStates[index] === false ? 'block' : 'none',
+                                                        borderRadius: 2,
+                                                    }}
+                                                />
                                             )}
                                         </Box>
                                     ) : (
                                         <Box
                                             sx={{
+                                                width: '100%',
+                                                height: '100%',
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                gap: 1.5,
-                                                p: 2,
-                                                height: thumbnailSize,
-                                                width: '100%',
-                                                border: 2,
-                                                borderColor: hoveredIndex === index ? 'primary.main' : 'divider',
-                                                borderRadius: 2.5,
                                                 cursor: 'pointer',
-                                                bgcolor: 'background.paper',
-                                                boxShadow: hoveredIndex === index ? 6 : 1,
-                                                transform: hoveredIndex === index ? 'translateY(-4px)' : 'translateY(0)',
-                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                '&:hover': {
-                                                    bgcolor: 'action.hover',
-                                                }
+                                                bgcolor: '#23272F',
+                                                gap: 1,
+                                                p: 1.5,
                                             }}
                                             onClick={() => window.open(url, '_blank')}
                                         >
-                                            <FileIcon 
-                                                sx={{ 
-                                                    fontSize: isMobile ? 40 : 48, 
-                                                    color: hoveredIndex === index ? 'primary.main' : 'action.active',
-                                                    transition: 'color 0.2s'
-                                                }} 
-                                            />
-                                            <Chip
-                                                label={getFileExtension(filename)}
-                                                size="small"
-                                                sx={{
-                                                    height: 20,
-                                                    fontSize: 10,
-                                                    fontWeight: 700,
-                                                    bgcolor: 'primary.main',
-                                                    color: 'primary.contrastText',
-                                                }}
-                                            />
-                                        </Box>
-                                    )}
-
-                                    <Box sx={{ mt: 1 }}>
-                                        <Tooltip title={filename} arrow>
-                                            <Typography
-                                                variant="caption"
-                                                noWrap
-                                                sx={{
-                                                    display: 'block',
-                                                    fontSize: 12,
-                                                    fontWeight: 500,
-                                                    color: 'text.primary',
-                                                }}
-                                            >
-                                                {filename}
-                                            </Typography>
-                                        </Tooltip>
-                                        {filesize && (
+                                            {fileTypeIcon(filetype, filename)}
                                             <Typography
                                                 variant="caption"
                                                 sx={{
                                                     fontSize: 11,
-                                                    color: 'text.secondary',
+                                                    color: '#7D858D',
+                                                    fontWeight: 600,
+                                                    letterSpacing: 0.5,
+                                                    bgcolor: '#282E33',
+                                                    px: 1,
+                                                    borderRadius: 1,
+                                                    mt: 0.5,
                                                 }}
                                             >
-                                                {formatFileSize(filesize)}
+                                                {(filename.split('.').pop() || '').toUpperCase()}
                                             </Typography>
-                                        )}
-                                    </Box>
+                                        </Box>
+                                    )}
                                 </Box>
-                            </Zoom>
-                        </Grid>
-                    );
-                })}
-            </Grid>
+                                {/* Filename and size below tile */}
+                                <Tooltip title={filename} placement="top">
+                                    <Typography
+                                        variant="caption"
+                                        noWrap
+                                        sx={{
+                                            display: 'block',
+                                            mt: 0.5,
+                                            fontSize: 12,
+                                            color: '#E6EDF2',
+                                            fontWeight: 400,
+                                            maxWidth: 120,
+                                        }}
+                                    >
+                                        {truncateFileName(filename)}
+                                    </Typography>
+                                </Tooltip>
+                                {filesize && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontSize: 11,
+                                            color: '#7D858D',
+                                        }}
+                                    >
+                                        {formatFileSize(filesize)}
+                                    </Typography>
+                                )}
+                            </Grid>
+                        );
+                    })}
+                </Grid>
+            </Box>
 
-            {/* Enhanced Lightbox */}
+            {/* Lightbox for image preview */}
             <Dialog
                 open={lightboxOpen}
                 onClose={() => setLightboxOpen(false)}
                 maxWidth={false}
-                fullScreen={isMobile}
                 PaperProps={{
                     sx: {
-                        bgcolor: 'rgba(0, 0, 0, 0.95)',
+                        bgcolor: 'rgba(0,0,0,0.97)',
                         boxShadow: 'none',
-                        maxWidth: '95vw',
-                        maxHeight: '95vh',
-                        m: 2,
-                    }
+                        maxWidth: '90vw',
+                        maxHeight: '90vh',
+                    },
                 }}
-                TransitionComponent={Fade}
-                transitionDuration={300}
             >
                 <Stack
                     direction="row"
@@ -322,40 +341,39 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                         zIndex: 1,
                     }}
                 >
-                    <Tooltip title="Download" arrow>
+                    <Tooltip title="Download">
                         <IconButton
                             onClick={() => handleDownload(selectedImage, selectedImageName)}
                             sx={{
-                                color: 'white',
-                                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(10px)',
+                                color: '#E6EDF2',
+                                bgcolor: 'rgba(40,46,51,0.8)',
+                                border: '1px solid #373E47',
                                 '&:hover': {
-                                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                    bgcolor: '#282E33',
+                                    borderColor: '#5299FF',
                                 },
-                                boxShadow: 3,
                             }}
                         >
                             <DownloadIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Close" arrow>
+                    <Tooltip title="Close">
                         <IconButton
                             onClick={() => setLightboxOpen(false)}
                             sx={{
-                                color: 'white',
-                                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(10px)',
+                                color: '#E6EDF2',
+                                bgcolor: 'rgba(40,46,51,0.8)',
+                                border: '1px solid #373E47',
                                 '&:hover': {
-                                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                    bgcolor: '#282E33',
+                                    borderColor: '#5299FF',
                                 },
-                                boxShadow: 3,
                             }}
                         >
                             <CloseIcon />
                         </IconButton>
                     </Tooltip>
                 </Stack>
-
                 {selectedImageName && (
                     <Box
                         sx={{
@@ -364,22 +382,21 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                             left: '50%',
                             transform: 'translateX(-50%)',
                             zIndex: 1,
-                            bgcolor: 'rgba(0, 0, 0, 0.8)',
-                            backdropFilter: 'blur(10px)',
-                            px: 3,
-                            py: 1.5,
-                            borderRadius: 2,
-                            boxShadow: 3,
+                            bgcolor: 'rgba(40,46,51,0.95)',
+                            border: '1px solid #373E47',
+                            px: 2,
+                            py: 1,
+                            borderRadius: '6px',
                         }}
                     >
                         <Stack direction="row" spacing={1} alignItems="center">
-                            <ImageIcon sx={{ fontSize: 20, color: 'grey.400' }} />
+                            <ImageIcon sx={{ fontSize: 18, color: '#7D858D' }} />
                             <Typography
                                 variant="body2"
                                 sx={{
-                                    color: 'white',
-                                    fontWeight: 500,
-                                    maxWidth: isMobile ? 250 : 500,
+                                    color: '#E6EDF2',
+                                    fontSize: 13,
+                                    maxWidth: 400,
                                 }}
                                 noWrap
                             >
@@ -388,7 +405,6 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                         </Stack>
                     </Box>
                 )}
-
                 <DialogContent
                     sx={{
                         p: 0,
@@ -396,6 +412,7 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden',
+                        bgcolor: 'transparent',
                     }}
                     onClick={() => setLightboxOpen(false)}
                 >
@@ -405,12 +422,11 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                         alt={selectedImageName}
                         sx={{
                             maxWidth: '100%',
-                            maxHeight: '90vh',
+                            maxHeight: '85vh',
                             objectFit: 'contain',
-                            borderRadius: 1,
-                            boxShadow: 8,
+                            borderRadius: '6px',
                         }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
                     />
                 </DialogContent>
             </Dialog>

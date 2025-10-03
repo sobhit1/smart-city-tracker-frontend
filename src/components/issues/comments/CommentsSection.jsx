@@ -6,11 +6,16 @@ import {
     Box,
     Typography,
     Avatar,
-    useTheme,
-    useMediaQuery,
+    Divider,
+    Fade,
 } from '@mui/material';
 
-import { addComment, updateComment, deleteComment, deleteAttachment } from '../../../api/issuesApi';
+import {
+    addComment,
+    updateComment,
+    deleteComment,
+    deleteAttachment,
+} from '../../../api/issuesApi';
 import { showNotification } from '../../../state/notificationSlice';
 import DeleteConfirmationDialog from '../DeleteConfirmationDialog';
 import Comment from './Comment';
@@ -24,13 +29,16 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const [commentToDelete, setCommentToDelete] = useState(null);
     const dispatch = useDispatch();
     const queryClient = useQueryClient();
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+    // Helper to refresh comments after mutation
+    const refreshComments = () => {
+        queryClient.invalidateQueries(['issue', issueId]);
+    };
 
     const { mutate: addCommentMutation, isPending: isAddingComment } = useMutation({
         mutationFn: addComment,
         onSuccess: () => {
-            queryClient.invalidateQueries(['issue', issueId]);
+            refreshComments();
             dispatch(showNotification({ message: 'Comment added successfully', severity: 'success' }));
             setNewComment('');
             setNewCommentFiles([]);
@@ -43,7 +51,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: updateCommentMutation } = useMutation({
         mutationFn: updateComment,
         onSuccess: () => {
-            queryClient.invalidateQueries(['issue', issueId]);
+            refreshComments();
             dispatch(showNotification({ message: 'Comment updated successfully', severity: 'success' }));
         },
         onError: (error) => {
@@ -54,7 +62,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: deleteCommentMutation, isPending: isDeletingComment } = useMutation({
         mutationFn: deleteComment,
         onSuccess: () => {
-            queryClient.invalidateQueries(['issue', issueId]);
+            refreshComments();
             dispatch(showNotification({ message: 'Comment deleted successfully', severity: 'success' }));
             setCommentToDelete(null);
         },
@@ -66,7 +74,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const { mutate: deleteAttachmentMutation } = useMutation({
         mutationFn: deleteAttachment,
         onSuccess: () => {
-            queryClient.invalidateQueries(['issue', issueId]);
+            refreshComments();
             dispatch(showNotification({ message: 'Attachment deleted', severity: 'success' }));
         },
         onError: (error) => {
@@ -81,7 +89,11 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     };
 
     const handleReply = (parentCommentId, replyData) => {
-        addCommentMutation({ issueId, commentData: { text: replyData.text, parentId: parentCommentId }, files: replyData.files || [] });
+        addCommentMutation({
+            issueId,
+            commentData: { text: replyData.text, parentId: parentCommentId },
+            files: replyData.files || [],
+        });
     };
 
     const handleFileChange = (event) => {
@@ -109,9 +121,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
             return null;
         };
         const comment = findComment(threadedComments, commentId);
-        if (comment) {
-            setCommentToDelete(comment);
-        }
+        if (comment) setCommentToDelete(comment);
     };
 
     const handleDeleteAttachment = (attachmentId) => {
@@ -142,20 +152,38 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
 
     return (
         <Box sx={{ px: { xs: 1, sm: 2 }, py: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+            <Typography
+                variant="h6"
+                sx={{
+                    fontWeight: 600,
+                    fontSize: 16,
+                    color: '#E6EDF2',
+                    mb: 2,
+                }}
+            >
                 Comments ({issueComments?.length || 0})
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: isMobile ? 1.5 : 2, mb: 4 }}>
-                <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>
-                    {currentUser?.fullName?.[0]}
+            {/* Add new comment */}
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+                <Avatar
+                    sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: '#5299FF',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                    }}
+                >
+                    {currentUser?.fullName?.[0]?.toUpperCase() || '?'}
                 </Avatar>
                 <Box sx={{ flexGrow: 1 }}>
                     <CommentInput
                         value={newComment}
                         onChange={setNewComment}
                         onSubmit={handleAddComment}
-                        onCancel={() => { setNewComment(''); setNewCommentFiles([]); }}
+                        onCancel={null}
                         currentUser={currentUser}
                         files={newCommentFiles}
                         onFileChange={handleFileChange}
@@ -165,33 +193,56 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
                 </Box>
             </Box>
 
+            {/* Comments list */}
             {threadedComments.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-                    <Typography>No comments yet. Be the first to comment!</Typography>
-                </Box>
+                <Fade in>
+                    <Box
+                        sx={{
+                            textAlign: 'center',
+                            py: 4,
+                            px: 2,
+                            bgcolor: '#282E33',
+                            borderRadius: '6px',
+                            border: '1px solid #373E47',
+                        }}
+                    >
+                        <Typography sx={{ color: '#7D858D', fontSize: 14 }}>
+                            No comments yet. Be the first to comment!
+                        </Typography>
+                    </Box>
+                </Fade>
             ) : (
-                <Box sx={{ '& > *:not(:last-child)': { borderBottom: 1, borderColor: 'divider' } }}>
-                    {threadedComments.map((comment) => (
-                        <Comment
-                            key={comment.id}
-                            comment={comment}
-                            currentUser={currentUser}
-                            canDeleteAnyComment={canDeleteAnyComment}
-                            onEdit={handleEditComment}
-                            onDelete={handleDeleteComment}
-                            onReply={handleReply}
-                            onDeleteAttachment={handleDeleteAttachment}
-                            level={0}
-                        />
+                <Box>
+                    {threadedComments.map((comment, index) => (
+                        <Box key={comment.id}>
+                            <Comment
+                                comment={comment}
+                                currentUser={currentUser}
+                                canDeleteAnyComment={canDeleteAnyComment}
+                                onEdit={handleEditComment}
+                                onDelete={handleDeleteComment}
+                                onReply={handleReply}
+                                onDeleteAttachment={handleDeleteAttachment}
+                                level={0}
+                                issueId={issueId}
+                                onRefresh={refreshComments}
+                            />
+                            {index < threadedComments.length - 1 && (
+                                <Divider sx={{ borderColor: '#373E47', my: 1 }} />
+                            )}
+                        </Box>
                     ))}
                 </Box>
             )}
 
+            {/* Delete confirmation dialog */}
             {commentToDelete && (
                 <DeleteConfirmationDialog
                     open={!!commentToDelete}
                     onClose={() => setCommentToDelete(null)}
-                    onConfirm={() => deleteCommentMutation({ issueId, commentId: commentToDelete.id })}
+                    onConfirm={() =>
+                        deleteCommentMutation({ issueId, commentId: commentToDelete.id })
+                    }
                     item={`comment by ${commentToDelete?.author?.name || 'Unknown User'}`}
                     isDeleting={isDeletingComment}
                 />
@@ -201,7 +252,7 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
 }
 
 CommentsSection.propTypes = {
-    issueId: PropTypes.number.isRequired,
+    issueId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     issueComments: PropTypes.array.isRequired,
     currentUser: PropTypes.object.isRequired,
     canDeleteAnyComment: PropTypes.bool.isRequired,

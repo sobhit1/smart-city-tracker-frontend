@@ -126,6 +126,18 @@ export const addAttachmentsToIssue = async ({ issueId, files }) => {
 };
 
 /**
+ * Adds attachments to an existing comment.
+ */
+export const addAttachmentsToComment = async ({ issueId, commentId, files }) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('files', file));
+  const response = await apiClient.post(`${ISSUES_ENDPOINT}/${issueId}/comments/${commentId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+/**
  * Deletes an attachment.
  */
 export const deleteAttachment = async ({ issueId, attachmentId }) => {

@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useDispatch } from 'react-redux';
 import {
     Box,
     Typography,
@@ -9,14 +11,11 @@ import {
     Menu,
     MenuItem,
     ListItemIcon,
-    useTheme,
-    useMediaQuery,
     Chip,
-    Tooltip,
-    Fade,
     Collapse,
     Divider,
-    Badge,
+    Fade,
+    CircularProgress,
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -32,11 +31,24 @@ import DeleteConfirmationDialog from '../DeleteConfirmationDialog';
 import HighlightedText from './HighlightedText';
 import AttachmentList from './AttachmentList';
 import CommentInput from './CommentInput';
+import { addAttachmentsToComment } from '../../../api/issuesApi';
+import { showNotification } from '../../../state/notificationSlice';
 
 const MAX_FILES = 5;
 const MENTION_MARKER = '\u200B';
 
-function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, onReply, onDeleteAttachment, level = 0 }) {
+function Comment({
+    comment,
+    currentUser,
+    canDeleteAnyComment,
+    onEdit,
+    onDelete,
+    onReply,
+    onDeleteAttachment,
+    level = 0,
+    issueId,
+    onRefresh,
+}) {
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(comment.text);
     const [editFiles, setEditFiles] = useState([]);
@@ -48,18 +60,50 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
     const [isHovered, setIsHovered] = useState(false);
     const [repliesCollapsed, setRepliesCollapsed] = useState(false);
     const menuOpen = Boolean(anchorEl);
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const menuButtonRef = useRef(null);
+
+    const dispatch = useDispatch();
 
     const canEditComment = currentUser.id === comment.author.id;
     const canDeleteComment = canDeleteAnyComment || canEditComment;
     const hasReplies = comment.replies && comment.replies.length > 0;
     const hasAttachments = comment.attachments && comment.attachments.length > 0;
 
-    const handleSave = () => {
-        onEdit(comment.id, { text: editText, files: editFiles });
+    useEffect(() => {
+        if (menuOpen && menuButtonRef.current) {
+            menuButtonRef.current.focus();
+        }
+    }, [menuOpen]);
+
+    const { mutate: uploadAttachments, isPending: isUploading } = useMutation({
+        mutationFn: ({ files }) =>
+            addAttachmentsToComment({
+                issueId,
+                commentId: comment.id,
+                files,
+            }),
+        onSuccess: () => {
+            setEditFiles([]);
+            if (onRefresh) onRefresh();
+            dispatch(showNotification({ message: 'Attachment(s) added successfully', severity: 'success' }));
+        },
+        onError: (error) => {
+            dispatch(showNotification({ message: error?.response?.data?.message || 'Failed to add attachment(s)', severity: 'error' }));
+        },
+    });
+
+    const handleSave = async () => {
+        if (editText.trim() === '' && editFiles.length === 0) return;
+
+        if (editText.trim() !== comment.text.trim()) {
+            await onEdit(comment.id, { text: editText, files: [] });
+        }
+
+        if (editFiles.length > 0) {
+            uploadAttachments({ files: editFiles });
+        }
+
         setIsEditing(false);
-        setEditFiles([]);
     };
 
     const handleReplySubmit = () => {
@@ -79,17 +123,17 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
     const handleFileChange = (event) => {
         const newFiles = Array.from(event.target.files);
         if (isEditing) {
-            setEditFiles(prev => [...prev, ...newFiles].slice(0, MAX_FILES));
+            setEditFiles((prev) => [...prev, ...newFiles].slice(0, MAX_FILES));
         } else {
-            setReplyFiles(prev => [...prev, ...newFiles].slice(0, MAX_FILES));
+            setReplyFiles((prev) => [...prev, ...newFiles].slice(0, MAX_FILES));
         }
     };
 
     const handleRemoveFile = (indexToRemove) => {
         if (isEditing) {
-            setEditFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+            setEditFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
         } else {
-            setReplyFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+            setReplyFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
         }
     };
 
@@ -115,182 +159,182 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
         return commentDate.toLocaleDateString();
     };
 
-    const marginLeft = isMobile ? Math.min(level, 3) * 2 : Math.min(level, 6) * 5;
-    const maxNestingLevel = isMobile ? 3 : 6;
+    const marginLeft = Math.min(level, 6) * 24;
+    const maxNestingLevel = 6;
 
     return (
-        <Box sx={{ position: 'relative' }}>
+        <Box sx={{ position: 'relative', width: '100%' }}>
             <Box
                 sx={{
                     display: 'flex',
-                    gap: isMobile ? 1.5 : 2,
-                    py: 2,
-                    ml: marginLeft,
-                    px: isMobile ? 1.5 : 2,
-                    borderRadius: 2,
-                    bgcolor: isHovered ? 'action.hover' : 'transparent',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    gap: 1.5,
+                    py: 1.5,
+                    ml: `${marginLeft}px`,
+                    px: { xs: 1, sm: 1.5 },
+                    borderRadius: '6px',
+                    bgcolor: isHovered ? '#2C333A' : 'transparent',
+                    transition: 'background-color 0.15s ease',
                     position: 'relative',
-                    '&::before': level > 0 ? {
-                        content: '""',
-                        position: 'absolute',
-                        left: isMobile ? -12 : -20,
-                        top: 0,
-                        bottom: hasReplies && !repliesCollapsed ? 0 : '50%',
-                        width: 2,
-                        bgcolor: 'divider',
-                        borderRadius: 1,
-                    } : {},
+                    '&::before': level > 0
+                        ? {
+                            content: '""',
+                            position: 'absolute',
+                            left: -12,
+                            top: 0,
+                            bottom: hasReplies && !repliesCollapsed ? 0 : '50%',
+                            width: 2,
+                            bgcolor: '#373E47',
+                        }
+                        : {},
                 }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    badgeContent={
-                        level === 0 && hasReplies ? (
-                            <Box
-                                sx={{
-                                    width: 18,
-                                    height: 18,
-                                    borderRadius: '50%',
-                                    bgcolor: 'primary.main',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: 'white',
-                                    border: 2,
-                                    borderColor: 'background.paper',
-                                }}
-                            >
-                                {comment.replies.length}
-                            </Box>
-                        ) : null
-                    }
+                <Avatar
+                    sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: '#5299FF',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                    }}
+                    aria-label={`Avatar for ${comment?.author?.name || 'Unknown User'}`}
                 >
-                    <Avatar
-                        sx={{
-                            width: isMobile ? 36 : 44,
-                            height: isMobile ? 36 : 44,
-                            bgcolor: 'primary.main',
-                            flexShrink: 0,
-                            boxShadow: isHovered ? 3 : 1,
-                            transition: 'box-shadow 0.2s',
-                            fontSize: isMobile ? 16 : 18,
-                            fontWeight: 600,
-                        }}
-                    >
-                        {comment?.author?.name?.charAt(0)?.toUpperCase() || '?'}
-                    </Avatar>
-                </Badge>
+                    {comment?.author?.name?.charAt(0)?.toUpperCase() || '?'}
+                </Avatar>
 
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, gap: 1, flexWrap: 'wrap' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', minWidth: 0 }}>
-                            <Typography variant="body2" component="span" sx={{ fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>
+                    {/* Header: name, time, edited, menu */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 0.5,
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                flexWrap: 'wrap',
+                                minWidth: 0,
+                            }}
+                        >
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    fontWeight: 600,
+                                    fontSize: 14,
+                                    color: '#E6EDF2',
+                                    maxWidth: 180,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                                title={comment?.author?.name || 'Unknown User'}
+                            >
                                 {comment?.author?.name || 'Unknown User'}
                             </Typography>
-                            <Tooltip title={new Date(comment.createdAt).toLocaleString()} arrow placement="top">
-                                <Chip
-                                    label={getRelativeTime(comment.createdAt)}
-                                    size="small"
-                                    sx={{
-                                        height: 20,
-                                        fontSize: 11,
-                                        fontWeight: 500,
-                                        bgcolor: 'action.selected',
-                                        '&:hover': { bgcolor: 'action.hover' },
-                                    }}
-                                />
-                            </Tooltip>
-                            {hasAttachments && !isEditing && (
-                                <Chip
-                                    icon={<AttachFileIcon sx={{ fontSize: 14 }} />}
-                                    label={comment.attachments.length}
-                                    size="small"
-                                    sx={{
-                                        height: 20,
-                                        fontSize: 11,
-                                        fontWeight: 500,
-                                        bgcolor: 'info.lighter',
-                                        color: 'info.dark',
-                                        '& .MuiChip-icon': { ml: 0.5, color: 'info.main' },
-                                    }}
-                                />
-                            )}
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: '#7D858D',
+                                    fontSize: 12,
+                                }}
+                            >
+                                {getRelativeTime(comment.createdAt)}
+                            </Typography>
                             {comment.edited && (
                                 <Chip
                                     label="Edited"
                                     size="small"
                                     sx={{
-                                        height: 20,
+                                        height: 18,
                                         fontSize: 10,
                                         fontWeight: 500,
-                                        bgcolor: 'warning.lighter',
-                                        color: 'warning.dark',
+                                        bgcolor: '#373E47',
+                                        color: '#7D858D',
+                                        '& .MuiChip-label': { px: 0.75 },
                                     }}
                                 />
                             )}
                         </Box>
                         {(canEditComment || canDeleteComment) && !isEditing && (
-                            <Fade in={isHovered || menuOpen || isMobile}>
-                                <Tooltip title="More options" arrow>
+                            <Fade in={isHovered || menuOpen}>
+                                <Box
+                                    sx={{
+                                        opacity: isHovered || menuOpen ? 1 : 0,
+                                        transition: 'opacity 0.15s',
+                                    }}
+                                >
                                     <IconButton
                                         size="small"
+                                        ref={menuButtonRef}
                                         onClick={(e) => setAnchorEl(e.currentTarget)}
                                         sx={{
-                                            transition: 'all 0.2s',
+                                            color: '#7D858D',
                                             '&:hover': {
-                                                bgcolor: 'action.selected',
-                                                transform: 'scale(1.1)',
-                                            }
+                                                bgcolor: '#373E47',
+                                                color: '#E6EDF2',
+                                            },
                                         }}
+                                        aria-label="More actions"
+                                        aria-haspopup="true"
+                                        aria-controls={menuOpen ? 'comment-menu' : undefined}
                                     >
                                         <MoreHorizIcon fontSize="small" />
                                     </IconButton>
-                                </Tooltip>
+                                </Box>
                             </Fade>
                         )}
                     </Box>
 
+                    {/* Main content: edit or display */}
                     {isEditing ? (
-                        <Fade in timeout={300}>
-                            <Box sx={{ mt: 1.5 }}>
-                                <CommentInput
-                                    value={editText}
-                                    onChange={setEditText}
-                                    onSubmit={handleSave}
-                                    onCancel={() => { setIsEditing(false); setEditFiles([]); }}
-                                    currentUser={currentUser}
-                                    files={editFiles}
-                                    onFileChange={handleFileChange}
-                                    onRemoveFile={handleRemoveFile}
-                                    isSubmitting={false}
-                                    autoFocus={true}
-                                />
-                            </Box>
-                        </Fade>
+                        <Box sx={{ mt: 1 }}>
+                            <CommentInput
+                                value={editText}
+                                onChange={setEditText}
+                                onSubmit={handleSave}
+                                onCancel={() => {
+                                    setIsEditing(false);
+                                    setEditFiles([]);
+                                }}
+                                currentUser={currentUser}
+                                files={editFiles}
+                                onFileChange={handleFileChange}
+                                onRemoveFile={handleRemoveFile}
+                                isSubmitting={isUploading}
+                                autoFocus={true}
+                            />
+                            {isUploading && (
+                                <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={18} />
+                                    <Typography variant="caption" sx={{ color: '#7D858D' }}>
+                                        Uploading attachments...
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
                     ) : (
                         <>
                             <Box
                                 sx={{
                                     mt: 0.5,
-                                    p: 2,
-                                    bgcolor: 'background.paper',
-                                    borderRadius: 2,
-                                    border: 1,
-                                    borderColor: isHovered ? 'primary.light' : 'divider',
-                                    transition: 'border-color 0.2s',
-                                    boxShadow: isHovered ? 1 : 0,
+                                    color: '#E6EDF2',
+                                    fontSize: 14,
+                                    lineHeight: 1.5,
+                                    wordBreak: 'break-word',
                                 }}
                             >
                                 <HighlightedText text={comment.text} />
                             </Box>
+
                             {hasAttachments && (
-                                <Box sx={{ mt: 1.5 }}>
+                                <Box sx={{ mt: 1 }}>
                                     <AttachmentList
                                         attachments={comment.attachments}
                                         onDelete={(attachment) => setAttachmentToDelete(attachment)}
@@ -298,122 +342,180 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
                                     />
                                 </Box>
                             )}
-                            <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+
+                            <Box
+                                sx={{
+                                    mt: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    flexWrap: 'wrap',
+                                }}
+                            >
                                 <Button
                                     size="small"
-                                    startIcon={<ReplyIcon sx={{ fontSize: 16 }} />}
+                                    startIcon={<ReplyIcon sx={{ fontSize: 14 }} />}
                                     onClick={handleReplyClick}
                                     sx={{
                                         textTransform: 'none',
-                                        fontWeight: 600,
-                                        px: 2,
-                                        py: 0.75,
-                                        borderRadius: 1.5,
+                                        fontWeight: 500,
+                                        fontSize: 12,
+                                        color: '#7D858D',
+                                        px: 1,
+                                        py: 0.25,
+                                        minHeight: 0,
                                         '&:hover': {
-                                            bgcolor: 'primary.lighter',
-                                            transform: 'translateY(-1px)',
+                                            bgcolor: '#373E47',
+                                            color: '#E6EDF2',
                                         },
-                                        transition: 'all 0.2s',
                                     }}
                                 >
                                     Reply
                                 </Button>
+
+                                {hasAttachments && (
+                                    <Chip
+                                        icon={<AttachFileIcon sx={{ fontSize: 12 }} />}
+                                        label={comment.attachments.length}
+                                        size="small"
+                                        sx={{
+                                            height: 20,
+                                            fontSize: 11,
+                                            bgcolor: '#373E47',
+                                            color: '#7D858D',
+                                            '& .MuiChip-icon': { ml: 0.5, color: '#7D858D' },
+                                        }}
+                                    />
+                                )}
+
                                 {hasReplies && (
                                     <Button
                                         size="small"
-                                        endIcon={repliesCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+                                        endIcon={
+                                            repliesCollapsed ? (
+                                                <ExpandMoreIcon sx={{ fontSize: 14 }} />
+                                            ) : (
+                                                <ExpandLessIcon sx={{ fontSize: 14 }} />
+                                            )
+                                        }
                                         onClick={() => setRepliesCollapsed(!repliesCollapsed)}
                                         sx={{
                                             textTransform: 'none',
-                                            fontWeight: 600,
-                                            color: 'text.secondary',
-                                            px: 2,
-                                            py: 0.75,
-                                            borderRadius: 1.5,
+                                            fontWeight: 500,
+                                            fontSize: 12,
+                                            color: '#7D858D',
+                                            px: 1,
+                                            py: 0.25,
+                                            minHeight: 0,
+                                            ml: 'auto',
                                             '&:hover': {
-                                                bgcolor: 'action.hover',
+                                                bgcolor: '#373E47',
+                                                color: '#E6EDF2',
                                             },
                                         }}
                                     >
-                                        {repliesCollapsed ? 'Show' : 'Hide'} {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
+                                        {comment.replies.length}{' '}
+                                        {comment.replies.length === 1 ? 'reply' : 'replies'}
                                     </Button>
                                 )}
                             </Box>
                         </>
                     )}
 
-                    <Collapse in={isReplying} timeout={300}>
-                        <Box sx={{ mt: 2.5, display: 'flex', gap: isMobile ? 1.5 : 2, pt: 2.5, borderTop: 2, borderColor: 'primary.light', borderRadius: 1 }}>
-                            <Avatar sx={{ width: 36, height: 36, bgcolor: 'secondary.main', fontSize: 16, fontWeight: 600, boxShadow: 1 }}>
-                                {currentUser?.fullName?.[0]}
-                            </Avatar>
-                            <Box sx={{ flexGrow: 1 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                                    <ReplyIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                        Replying to <strong>{comment?.author?.name || 'Unknown User'}</strong>
-                                    </Typography>
-                                </Box>
-                                <CommentInput
-                                    value={replyText}
-                                    onChange={setReplyText}
-                                    onSubmit={handleReplySubmit}
-                                    onCancel={() => { setIsReplying(false); setReplyText(''); setReplyFiles([]); }}
-                                    currentUser={currentUser}
-                                    files={replyFiles}
-                                    onFileChange={handleFileChange}
-                                    onRemoveFile={handleRemoveFile}
-                                    isSubmitting={false}
-                                    placeholder="Write a reply..."
-                                    autoFocus={true}
-                                />
-                            </Box>
+                    {/* Reply input */}
+                    <Collapse in={isReplying}>
+                        <Box sx={{ mt: 1.5, pl: { xs: 0, sm: 5 } }}>
+                            <CommentInput
+                                value={replyText}
+                                onChange={setReplyText}
+                                onSubmit={handleReplySubmit}
+                                onCancel={() => {
+                                    setIsReplying(false);
+                                    setReplyText('');
+                                    setReplyFiles([]);
+                                }}
+                                currentUser={currentUser}
+                                files={replyFiles}
+                                onFileChange={handleFileChange}
+                                onRemoveFile={handleRemoveFile}
+                                isSubmitting={false}
+                                placeholder="Write a reply..."
+                                autoFocus={true}
+                            />
                         </Box>
                     </Collapse>
 
+                    {/* Menu for edit/delete */}
                     <Menu
+                        id="comment-menu"
                         anchorEl={anchorEl}
                         open={menuOpen}
                         onClose={() => setAnchorEl(null)}
-                        TransitionComponent={Fade}
                         PaperProps={{
                             sx: {
-                                boxShadow: 4,
-                                borderRadius: 2,
+                                bgcolor: '#282E33',
+                                border: '1px solid #373E47',
+                                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                                borderRadius: '6px',
                                 minWidth: 160,
-                            }
+                            },
+                        }}
+                        anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                        }}
+                        transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
                         }}
                     >
                         {canEditComment && (
                             <MenuItem
-                                onClick={() => { setIsEditing(true); setAnchorEl(null); }}
+                                onClick={() => {
+                                    setIsEditing(true);
+                                    setAnchorEl(null);
+                                }}
                                 sx={{
-                                    py: 1.5,
-                                    gap: 1.5,
+                                    py: 0.5,
+                                    px: 1,
+                                    minHeight: 28,
+                                    fontSize: 13,
+                                    color: '#E6EDF2',
                                     '&:hover': {
-                                        bgcolor: 'primary.lighter',
-                                    }
+                                        bgcolor: '#373E47',
+                                    },
                                 }}
                             >
-                                <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-                                <Typography variant="body2" fontWeight={500}>Edit</Typography>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                    <EditIcon fontSize="small" sx={{ color: '#7D858D' }} />
+                                </ListItemIcon>
+                                Edit
                             </MenuItem>
                         )}
-                        {canEditComment && canDeleteComment && <Divider sx={{ my: 0.5 }} />}
+                        {canEditComment && canDeleteComment && (
+                            <Divider sx={{ borderColor: '#373E47' }} />
+                        )}
                         {canDeleteComment && (
                             <MenuItem
-                                onClick={() => { setAnchorEl(null); onDelete(comment.id); }}
+                                onClick={() => {
+                                    setAnchorEl(null);
+                                    onDelete(comment.id);
+                                }}
                                 sx={{
-                                    py: 1.5,
-                                    gap: 1.5,
-                                    color: 'error.main',
+                                    py: 0.5,
+                                    px: 1,
+                                    minHeight: 28,
+                                    fontSize: 13,
+                                    color: '#f85149',
                                     '&:hover': {
-                                        bgcolor: 'error.lighter',
-                                    }
+                                        bgcolor: 'rgba(248, 81, 73, 0.1)',
+                                    },
                                 }}
                             >
-                                <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
-                                <Typography variant="body2" fontWeight={500}>Delete</Typography>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                    <DeleteIcon fontSize="small" sx={{ color: '#f85149' }} />
+                                </ListItemIcon>
+                                Delete
                             </MenuItem>
                         )}
                     </Menu>
@@ -421,28 +523,27 @@ function Comment({ comment, currentUser, canDeleteAnyComment, onEdit, onDelete, 
             </Box>
 
             {/* Recursive rendering of replies */}
-            <Collapse in={hasReplies && !repliesCollapsed} timeout={300}>
+            <Collapse in={hasReplies && !repliesCollapsed}>
                 <Box>
-                    {comment.replies?.map((reply, index) => (
-                        <Box key={reply.id}>
-                            <Comment
-                                comment={reply}
-                                currentUser={currentUser}
-                                canDeleteAnyComment={canDeleteAnyComment}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
-                                onReply={onReply}
-                                onDeleteAttachment={onDeleteAttachment}
-                                level={Math.min(level + 1, maxNestingLevel)}
-                            />
-                            {index < comment.replies.length - 1 && (
-                                <Divider sx={{ ml: marginLeft, opacity: 0.3 }} />
-                            )}
-                        </Box>
+                    {comment.replies?.map((reply) => (
+                        <Comment
+                            key={reply.id}
+                            comment={reply}
+                            currentUser={currentUser}
+                            canDeleteAnyComment={canDeleteAnyComment}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                            onReply={onReply}
+                            onDeleteAttachment={onDeleteAttachment}
+                            level={Math.min(level + 1, maxNestingLevel)}
+                            issueId={issueId}
+                            onRefresh={onRefresh}
+                        />
                     ))}
                 </Box>
             </Collapse>
 
+            {/* Attachment delete confirmation */}
             {attachmentToDelete && (
                 <DeleteConfirmationDialog
                     open={!!attachmentToDelete}
@@ -465,6 +566,8 @@ Comment.propTypes = {
     onReply: PropTypes.func.isRequired,
     onDeleteAttachment: PropTypes.func.isRequired,
     level: PropTypes.number,
+    issueId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    onRefresh: PropTypes.func,
 };
 
 export default Comment;
