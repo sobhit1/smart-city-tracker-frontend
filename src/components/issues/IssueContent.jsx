@@ -172,13 +172,25 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                 uploading: true,
             }));
             setLocalAttachments(prev => [...prev, ...tempAttachments]);
+            return { tempAttachments };
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+        onSuccess: (newAttachments) => {
+            setLocalAttachments(prev => [
+                ...prev.filter(att => {
+                    const attId = String(att.id);
+                    return !attId.startsWith('temp-');
+                }),
+                ...newAttachments.map(att => ({ ...att, uploading: false }))
+            ]);
             dispatch(showNotification({ message: 'Attachment(s) added successfully', severity: 'success' }));
         },
         onError: (error) => {
-            setLocalAttachments(issue.attachments);
+            setLocalAttachments(prev => 
+                prev.filter(att => {
+                    const attId = String(att.id);
+                    return !attId.startsWith('temp-');
+                })
+            );
             dispatch(showNotification({ message: error.response?.data?.message || 'Failed to add attachment(s)', severity: 'error' }));
         },
         onSettled: () => setUploading(false),
@@ -245,7 +257,6 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     variant="h4"
                     placeholder="Enter issue title..."
                 />
-
                 {/* Description */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -259,7 +270,6 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                         placeholder="Add a description..."
                     />
                 </Box>
-
                 {/* Attachments */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -282,25 +292,47 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                                     boxShadow: '0 1px 6px 0 rgba(0,0,0,0.10)',
                                     '&:hover .attachment-actions': { opacity: 1 },
                                 }}>
-                                    <Box
-                                        component="img"
-                                        src={att.url || ''}
-                                        alt={att.fileName}
-                                        sx={{
-                                            width: 120,
-                                            height: 120,
-                                            objectFit: 'cover',
-                                            borderRadius: 2,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            cursor: att.uploading ? 'not-allowed' : 'pointer',
-                                            opacity: att.uploading ? 0.5 : 1,
-                                            transition: 'opacity 0.2s',
-                                            background: att.uploading ? 'repeating-linear-gradient(45deg, #23272e, #23272e 10px, #282E33 10px, #282E33 20px)' : undefined,
-                                            '&:hover': { opacity: att.uploading ? 0.5 : 0.85 }
-                                        }}
-                                        onClick={() => !att.uploading && handleOpenLightbox(att.url)}
-                                    />
+                                    {att.url ? (
+                                        <Box
+                                            component="img"
+                                            src={att.url}
+                                            alt={att.fileName}
+                                            sx={{
+                                                width: 120,
+                                                height: 120,
+                                                objectFit: 'cover',
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                cursor: att.uploading ? 'not-allowed' : 'pointer',
+                                                opacity: att.uploading ? 0.5 : 1,
+                                                transition: 'opacity 0.2s',
+                                                '&:hover': { opacity: att.uploading ? 0.5 : 0.85 }
+                                            }}
+                                            onClick={() => !att.uploading && att.url && handleOpenLightbox(att.url)}
+                                        />
+                                    ) : (
+                                        <Box
+                                            sx={{
+                                                width: 120,
+                                                height: 120,
+                                                borderRadius: 2,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                backgroundColor: 'background.default',
+                                                color: 'text.secondary',
+                                                fontSize: 12,
+                                                textAlign: 'center',
+                                                p: 1,
+                                                wordBreak: 'break-word'
+                                            }}
+                                        >
+                                            {att.fileName || 'No preview'}
+                                        </Box>
+                                    )}
                                     {att.uploading && (
                                         <Box sx={{
                                             position: 'absolute',
@@ -324,7 +356,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                                                 transition: 'opacity 0.2s',
                                             }}
                                         >
-                                            {!att.uploading && (
+                                            {!att.uploading && att.url && (
                                                 <Tooltip title="View">
                                                     <IconButton
                                                         size="small"
@@ -404,7 +436,6 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     </Grid>
                 </Box>
             </Paper>
-
             {/* Lightbox Dialog component */}
             <Dialog
                 open={lightboxOpen}
@@ -444,7 +475,6 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     />
                 </DialogContent>
             </Dialog>
-
             {/* Delete Confirmation Dialog */}
             {attachmentToDelete && (
                 <DeleteConfirmationDialog
