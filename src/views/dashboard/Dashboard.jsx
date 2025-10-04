@@ -75,7 +75,6 @@ function Dashboard() {
     pageSize: 10,
   });
 
-  // --- Data Fetching ---
   const { data, isLoading, isError, error } = useIssues(filters, paginationModel);
   const { data: categoriesData } = useCategories();
   const { data: statusesData } = useStatuses();

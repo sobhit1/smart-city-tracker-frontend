@@ -30,7 +30,6 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
     const dispatch = useDispatch();
     const queryClient = useQueryClient();
 
-    // Helper to refresh comments after mutation
     const refreshComments = () => {
         queryClient.invalidateQueries(['issue', issueId]);
     };

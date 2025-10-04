@@ -6,8 +6,8 @@ import {
     DialogContent,
     DialogActions,
     Button,
-    Fade,
     CircularProgress,
+    Box,
 } from '@mui/material';
 import { ErrorOutline } from '@mui/icons-material';
 
@@ -22,13 +22,12 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item, isDeleting }
             }}
             maxWidth="xs"
             fullWidth
-            TransitionComponent={Fade}
             PaperProps={{
                 sx: {
-                    borderRadius: 2,
-                    backgroundColor: '#1F2428',
-                    border: '1px solid #373E47',
-                    p: 1.5
+                    borderRadius: '8px',
+                    backgroundColor: '#161b22',
+                    border: '1px solid #30363d',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
                 }
             }}
         >
@@ -36,65 +35,126 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item, isDeleting }
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1,
-                    color: '#f85149',
-                    fontWeight: 700,
-                    fontSize: '1.1rem',
-                    pb: 0.5
+                    gap: 1.5,
+                    color: '#c9d1d9',
+                    fontWeight: 600,
+                    fontSize: '16px',
+                    px: 3,
+                    py: 1.5,
+                    borderBottom: '1px solid #30363d',
                 }}
             >
-                <ErrorOutline sx={{ color: '#f85149', fontSize: 24 }} />
-                Delete {item}
+                <Box
+                    sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                        border: '1px solid rgba(248, 81, 73, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <ErrorOutline sx={{ color: '#f85149', fontSize: 20 }} />
+                </Box>
+                Delete Confirmation
             </DialogTitle>
 
-            <DialogContent sx={{ pt: 1.5, pb: 1 }}>
+            <DialogContent sx={{ px: 3, pt: 3 }}>
                 <Typography
-                    color="text.primary"
-                    sx={{ fontSize: '15px', lineHeight: 2, marginLeft: 4 }}
+                    sx={{ 
+                        fontSize: '14px', 
+                        lineHeight: 1.6,
+                        color: '#c9d1d9',
+                        mb: 1.5,
+                        pt: 1.5,
+                    }}
                 >
-                    Are you sure you want to delete this {item.toLowerCase()}?
+                    Are you sure you want to delete <strong>{item}</strong>?
                 </Typography>
-                <Typography
-                    sx={{ mt: 1.5, color: '#8B949E', fontSize: '14px', lineHeight: 2, marginLeft: 4 }}
+                <Box
+                    sx={{
+                        px: 2,
+                        py: 1.5,
+                        backgroundColor: '#0d1117',
+                        border: '1px solid #f85149',
+                        borderRadius: '6px',
+                    }}
                 >
-                    This action <strong>cannot</strong> be undone.
-                </Typography>
+                    <Typography
+                        sx={{ 
+                            color: '#f85149',
+                            fontSize: '13px',
+                            lineHeight: 1.5,
+                        }}
+                    >
+                        ⚠️ This action cannot be undone. All data will be permanently removed.
+                    </Typography>
+                </Box>
             </DialogContent>
 
-            <DialogActions sx={{ pt: 1.5, px: 2, pb: 2 }}>
+            <DialogActions 
+                sx={{ 
+                    px: 3,
+                    pb: 2, 
+                    gap: 1.5,
+                }}
+            >
                 <Button
                     onClick={onClose}
-                    variant="outlined"
                     disabled={isDeleting}
                     sx={{
-                        color: '#8B949E',
-                        borderColor: '#30363d',
+                        color: '#c9d1d9',
+                        backgroundColor: '#21262d',
+                        border: '1px solid #30363d',
                         textTransform: 'none',
                         fontWeight: 500,
                         fontSize: '14px',
-                        px: 2,
-                        py: 0.5,
-                        '&:hover': { backgroundColor: 'rgba(139, 148, 158, 0.1)', borderColor: '#444c56' }
+                        px: 2.5,
+                        py: 0.75,
+                        borderRadius: '6px',
+                        '&:hover': { 
+                            backgroundColor: '#30363d',
+                            borderColor: '#484f58',
+                        },
+                        '&:disabled': {
+                            color: '#6e7681',
+                            backgroundColor: '#21262d',
+                        }
                     }}
                 >
                     Cancel
                 </Button>
                 <Button
                     onClick={onConfirm}
-                    variant="contained"
-                    color="error"
                     disabled={isDeleting}
                     sx={{
+                        color: '#fff',
+                        backgroundColor: '#da3633',
                         textTransform: 'none',
                         fontWeight: 600,
                         fontSize: '14px',
                         px: 2.5,
-                        py: 0.6,
+                        py: 0.75,
+                        borderRadius: '6px',
                         boxShadow: 'none',
-                        '&:hover': { boxShadow: '0 3px 12px rgba(248, 81, 73, 0.35)' }
+                        minWidth: '90px',
+                        '&:hover': { 
+                            backgroundColor: '#f85149',
+                            boxShadow: '0 4px 12px rgba(248, 81, 73, 0.4)',
+                        },
+                        '&:disabled': {
+                            color: '#8b949e',
+                            backgroundColor: '#30363d',
+                        }
                     }}
                 >
-                    {isDeleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
+                    {isDeleting ? (
+                        <CircularProgress size={18} sx={{ color: '#8b949e' }} />
+                    ) : (
+                        'Delete'
+                    )}
                 </Button>
             </DialogActions>
         </Dialog>
