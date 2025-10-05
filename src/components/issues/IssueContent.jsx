@@ -522,16 +522,17 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                         </Box>
                     ) : (
                         <Chip
-                            label={category || 'Not categorized'}
+                            label={issue.category || 'Uncategorized'}
                             sx={{
-                                fontSize: '0.95rem',
+                                ml: 5,
                                 fontWeight: 600,
+                                fontSize: 16,
+                                color: '#5299FF',
+                                background: 'rgba(82,153,255,0.10)',
+                                border: '1px solid #5299FF44',
+                                borderRadius: 1.5,
                                 px: 2,
-                                py: 2.5,
-                                height: 'auto',
-                                backgroundColor: '#5299FF',
-                                color: '#E6EDF2',
-                                boxShadow: '0 2px 8px rgba(82, 153, 255, 0.3)',
+                                py: 1,
                             }}
                         />
                     )}

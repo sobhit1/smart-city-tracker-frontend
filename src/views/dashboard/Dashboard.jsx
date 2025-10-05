@@ -96,12 +96,16 @@ function Dashboard() {
 
   const navigate = useNavigate();
 
-  const handleFilterChange = (event, newView) => {
+  const handleFilterChange = (eventOrValue, newView) => {
     setPaginationModel(prev => ({ ...prev, page: 0 }));
-    if (newView !== undefined && newView !== null) {
+
+    if (typeof newView === 'string') {
       setFilters(prev => ({ ...prev, view: newView }));
-    } else {
-      const { name, value } = event.target;
+      return;
+    }
+
+    if (eventOrValue && eventOrValue.target) {
+      const { name, value } = eventOrValue.target;
       setFilters(prev => ({ ...prev, [name]: value }));
     }
   };

@@ -10,13 +10,13 @@ import { fetchIssues, fetchIssueById } from '../api/issuesApi';
  * @returns The state object from React Query.
  */
 export const useIssues = (filters, paginationModel) => {
+  const safeFilters = JSON.parse(JSON.stringify(filters));
+  const safePagination = JSON.parse(JSON.stringify(paginationModel));
+
   return useQuery({
-    queryKey: ['issues', filters, paginationModel],
-
+    queryKey: ['issues', safeFilters, safePagination],
     queryFn: fetchIssues,
-
     staleTime: 60 * 1000,
-
     placeholderData: (previousData) => previousData,
   });
 };
