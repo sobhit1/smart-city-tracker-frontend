@@ -10,7 +10,7 @@ import Loader from '../../components/Loader';
 import { DASHBOARD_PATH } from '../../const/routes';
 
 import IssueContent from '../../components/issues/IssueContent';
-import DetailsSidebar from '../../components/issues/DetailsSidebar';
+import DetailsSidebar from '../../components/issues/details_sidebar/DetailsSidebar';
 import CommentsSection from '../../components/issues/comments/CommentsSection';
 
 function IssueDetails() {

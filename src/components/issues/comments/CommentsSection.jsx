@@ -132,15 +132,27 @@ function CommentsSection({ issueId, issueComments, currentUser, canDeleteAnyComm
         const commentMap = {};
         const rootComments = [];
 
-        comments.forEach(comment => {
+        const sortedComments = [...comments].sort((a, b) =>
+            new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        sortedComments.forEach(comment => {
             commentMap[comment.id] = { ...comment, replies: [] };
         });
 
-        comments.forEach(comment => {
+        sortedComments.forEach(comment => {
             if (comment.parentId && commentMap[comment.parentId]) {
                 commentMap[comment.parentId].replies.push(commentMap[comment.id]);
             } else {
                 rootComments.push(commentMap[comment.id]);
+            }
+        });
+
+        rootComments.forEach(comment => {
+            if (comment.replies && comment.replies.length > 0) {
+                comment.replies.sort((a, b) =>
+                    new Date(a.createdAt) - new Date(b.createdAt)
+                );
             }
         });
 

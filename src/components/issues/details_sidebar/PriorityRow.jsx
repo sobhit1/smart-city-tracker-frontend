@@ -11,7 +11,7 @@ import {
     ClickAwayListener,
 } from '@mui/material';
 
-import { usePriorities } from '../../hooks/useLookups';
+import { usePriorities } from '../../../hooks/useLookups';
 import SidebarRow from './SidebarRow';
 
 function PriorityRow({ value, onChange, hasEdit = false }) {

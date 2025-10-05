@@ -97,16 +97,35 @@ function Comment({
     const handleSave = async () => {
         if (editText.trim() === '' && editFiles.length === 0) return;
 
-        if (editText.trim() !== comment.text.trim()) {
-            await onEdit(comment.id, { text: editText, files: [] });
-        }
+        try {
+            let textUpdated = false;
+            let attachmentsUpdated = false;
 
-        if (editFiles.length > 0) {
-            uploadAttachments({ files: editFiles });
-        }
+            if (editText.trim() !== comment.text.trim()) {
+                await onEdit(comment.id, { text: editText, files: [] });
+                textUpdated = true;
+            }
 
-        setIsEditing(false);
+            if (editFiles.length > 0) {
+                await uploadAttachments({ files: editFiles });
+                attachmentsUpdated = true;
+            }
+
+            setIsEditing(false);
+
+            if (textUpdated && attachmentsUpdated) {
+                dispatch(showNotification({ message: 'Comment and attachments updated successfully', severity: 'success' }));
+            } else if (textUpdated) {
+                dispatch(showNotification({ message: 'Comment updated successfully', severity: 'success' }));
+            } else if (attachmentsUpdated) {
+            }
+
+        } catch (error) {
+            dispatch(showNotification({ message: 'Failed to update comment', severity: 'error' }));
+            console.error('Failed to update comment:', error);
+        }
     };
+
 
     const handleReplySubmit = () => {
         if (replyText.trim() === '' && replyFiles.length === 0) return;
@@ -120,7 +139,7 @@ function Comment({
         const mentionText = `@[${comment?.author?.name || 'Unknown User'}]${MENTION_MARKER} `;
         setReplyText(mentionText);
         setIsReplying(true);
-        
+
         setTimeout(() => {
             if (inputRef.current) {
                 const textarea = inputRef.current.querySelector('textarea');
@@ -137,7 +156,7 @@ function Comment({
         setIsEditing(true);
         setAnchorEl(null);
         setEditText(comment.text);
-        
+
         setTimeout(() => {
             if (editInputRef.current) {
                 const textarea = editInputRef.current.querySelector('textarea');

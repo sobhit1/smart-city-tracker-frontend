@@ -17,14 +17,14 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 
-import { updateIssue, deleteIssue } from '../../api/issuesApi';
-import { useUsers, useStatuses, usePriorities } from '../../hooks/useLookups';
-import { showNotification } from '../../state/notificationSlice';
-import { DASHBOARD_PATH } from '../../const/routes';
+import { updateIssue, deleteIssue } from '../../../api/issuesApi';
+import { useUsers, useStatuses, usePriorities } from '../../../hooks/useLookups';
+import { showNotification } from '../../../state/notificationSlice';
+import { DASHBOARD_PATH } from '../../../const/routes';
 import ReporterAssignee from './ReporterAssignee';
 import SidebarRow from './SidebarRow';
 import AssignmentDialog from './AssignmentDialog';
-import DeleteConfirmationDialog from './DeleteConfirmationDialog';
+import DeleteConfirmationDialog from '../DeleteConfirmationDialog';
 import DatePickerRow from './DatePickerRow';
 import PriorityRow from './PriorityRow';
 
