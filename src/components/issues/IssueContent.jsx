@@ -19,6 +19,8 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Chip,
+    Zoom,
 } from '@mui/material';
 import {
     AttachFile as AttachFileIcon,
@@ -27,6 +29,11 @@ import {
     ZoomIn as ZoomInIcon,
     Delete as DeleteIcon,
     MyLocation as MyLocationIcon,
+    Edit as EditIcon,
+    Category as CategoryIcon,
+    Description as DescriptionIcon,
+    LocationOn as LocationOnIcon,
+    Image as ImageIcon,
 } from '@mui/icons-material';
 
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -67,11 +74,16 @@ function EditableField({ initialValue, onSave, canEdit, multiline = false, varia
                     onChange={(e) => setValue(e.target.value)}
                     autoFocus
                     sx={{
-                        mb: 1,
+                        mb: 1.5,
                         '& .MuiInputBase-root': {
-                            fontSize: variant === 'h4' ? '1.5rem' : '1rem',
-                            backgroundColor: '#23272e',
-                            borderRadius: 2,
+                            fontSize: variant === 'h4' ? '2rem' : '1rem',
+                            backgroundColor: '#1D2125',
+                            borderRadius: 1.5,
+                            transition: 'all 0.2s ease',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#5299FF',
+                            borderWidth: 2,
                         }
                     }}
                     onKeyDown={(e) => {
@@ -85,16 +97,38 @@ function EditableField({ initialValue, onSave, canEdit, multiline = false, varia
                         variant="contained"
                         size="small"
                         startIcon={<CheckCircleIcon />}
-                        sx={{ fontWeight: 600 }}
+                        sx={{
+                            fontWeight: 600,
+                            px: 2,
+                            borderRadius: 1.5,
+                            backgroundColor: '#3fb950',
+                            '&:hover': {
+                                backgroundColor: '#2ea043',
+                            },
+                            transition: 'all 0.3s ease',
+                        }}
                     >
-                        Save
+                        Save Changes
                     </Button>
                     <Button
                         onClick={handleCancel}
                         variant="outlined"
-                        size="small"
+                        size="medium"
                         startIcon={<CancelIcon />}
-                        sx={{ fontWeight: 500 }}
+                        sx={{
+                            fontWeight: 500,
+                            px: 2,
+                            borderRadius: 1.5,
+                            borderWidth: 1,
+                            borderColor: '#f85149',
+                            color: '#f85149',
+                            '&:hover': {
+                                borderWidth: 1,
+                                borderColor: '#f85149',
+                                backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                            },
+                            transition: 'all 0.3s ease',
+                        }}
                     >
                         Cancel
                     </Button>
@@ -108,25 +142,49 @@ function EditableField({ initialValue, onSave, canEdit, multiline = false, varia
             onClick={() => canEdit && setIsEditing(true)}
             sx={{
                 cursor: canEdit ? 'pointer' : 'default',
-                borderRadius: 2,
-                px: 1,
-                py: 0.5,
-                transition: 'background 0.2s',
-                '&:hover': canEdit ? { backgroundColor: 'rgba(82, 153, 255, 0.08)' } : {},
+                borderRadius: 1.5,
+                px: 2,
+                py: 1.5,
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                border: '2px solid transparent',
+                '&:hover': canEdit ? {
+                    backgroundColor: 'rgba(82, 153, 255, 0.08)',
+                    borderColor: 'rgba(82, 153, 255, 0.3)',
+                    transform: 'translateX(4px)',
+                } : {},
+                '&:hover .edit-icon': {
+                    opacity: 1,
+                }
             }}
         >
             <Typography
                 variant={variant}
                 sx={{
                     whiteSpace: 'pre-wrap',
-                    color: value ? 'text.primary' : 'text.secondary',
+                    color: value ? '#E6EDF2' : '#7D858D',
                     fontWeight: variant === 'h4' ? 700 : 400,
-                    fontSize: variant === 'h4' ? 24 : 16,
-                    letterSpacing: 0.1,
+                    fontSize: variant === 'h4' ? '2rem' : '1rem',
+                    letterSpacing: variant === 'h4' ? '-0.02em' : '0.01em',
+                    lineHeight: variant === 'h4' ? 1.3 : 1.6,
                 }}
             >
                 {value || placeholder}
             </Typography>
+            {canEdit && (
+                <EditIcon
+                    className="edit-icon"
+                    sx={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        fontSize: 18,
+                        color: '#5299FF',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease',
+                    }}
+                />
+            )}
         </Box>
     );
 }
@@ -249,7 +307,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
             dispatch(showNotification({ message: 'Attachment(s) added successfully', severity: 'success' }));
         },
         onError: (error) => {
-            setLocalAttachments(prev => 
+            setLocalAttachments(prev =>
                 prev.filter(att => {
                     const attId = String(att.id);
                     return !attId.startsWith('temp-');
@@ -276,8 +334,32 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
         }
     });
 
+    const updateFieldMutation = useMutation({
+        mutationFn: ({ fieldName, value }) =>
+            updateIssue({ issueId: issue.id, updateData: { [fieldName]: value } }),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            let message = 'Issue updated successfully';
+            if (variables.fieldName === 'title') {
+                message = 'Title updated successfully';
+            } else if (variables.fieldName === 'description') {
+                message = 'Description updated successfully';
+            }
+            dispatch(showNotification({ message, severity: 'success' }));
+        },
+        onError: (error, variables) => {
+            let message = 'Failed to update issue';
+            if (variables.fieldName === 'title') {
+                message = 'Failed to update title';
+            } else if (variables.fieldName === 'description') {
+                message = 'Failed to update description';
+            }
+            dispatch(showNotification({ message: error.response?.data?.message || message, severity: 'error' }));
+        }
+    });
+
     const handleSaveField = (fieldName, value) => {
-        updateIssue({ issueId: issue.id, updateData: { [fieldName]: value } });
+        updateFieldMutation.mutate({ fieldName, value });
     };
 
     const handleFileChange = (event) => {
@@ -347,101 +429,202 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
     return (
         <>
             <Paper sx={{
-                p: 3,
+                p: 4,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 3,
-                backgroundColor: 'background.paper',
+                gap: 4,
+                backgroundColor: '#282E33',
                 borderRadius: 2,
-                boxShadow: '0 2px 12px 0 rgba(0,0,0,0.08)'
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                border: '1px solid #373E47',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #5299FF 0%, #3fb950 100%)',
+                }
             }}>
-                {/* Title */}
-                <EditableField
-                    initialValue={issue.title}
-                    onSave={(newTitle) => handleSaveField('title', newTitle)}
-                    canEdit={canEdit}
-                    variant="h4"
-                    placeholder="Enter issue title..."
-                />
-                {/* Category */}
+                {/* Title Section */}
                 <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        Category
-                    </Typography>
+                    <EditableField
+                        initialValue={issue.title}
+                        onSave={(newTitle) => handleSaveField('title', newTitle)}
+                        canEdit={canEdit}
+                        variant="h4"
+                        placeholder="Enter issue title..."
+                    />
+                </Box>
+
+                {/* Category Section */}
+                <Box sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    backgroundColor: '#1D2125',
+                    border: '1px solid #373E47',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Box sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1,
+                            backgroundColor: 'rgba(82, 153, 255, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <CategoryIcon sx={{ color: '#5299FF', fontSize: 20 }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#E6EDF2', fontSize: '1.1rem' }}>
+                            Category
+                        </Typography>
+                    </Box>
                     {canEdit ? (
-                        <FormControl>
-                            <InputLabel>Category</InputLabel>
-                            <Select
-                                value={category}
-                                label="Category"
-                                onChange={handleCategoryChange}
-                                disabled={areCategoriesLoading || categoryUpdating}
-                                sx={{
-                                    minWidth: 180,
-                                    backgroundColor: '#23272e',
-                                    borderRadius: 2,
-                                }}
-                            >
-                                {categories.map((cat) => (
-                                    <MenuItem key={cat.id} value={cat.name}>{cat.name}</MenuItem>
-                                ))}
-                            </Select>
+                        <Box>
+                            <FormControl sx={{ minWidth: '35%' }}>
+                                <InputLabel sx={{ fontWeight: 500 }}>Select Category</InputLabel>
+                                <Select
+                                    value={category}
+                                    label="Select Category"
+                                    onChange={handleCategoryChange}
+                                    disabled={areCategoriesLoading || categoryUpdating}
+                                    sx={{
+                                        backgroundColor: '#282E33',
+                                        borderRadius: 1.5,
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#373E47',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#8b949e',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#5299FF',
+                                        }
+                                    }}
+                                >
+                                    {categories.map((cat) => (
+                                        <MenuItem key={cat.id} value={cat.name}>{cat.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                             {categoryUpdating && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                                    <CircularProgress size={18} sx={{ mr: 1 }} />
-                                    <Typography variant="caption">Updating...</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+                                    <CircularProgress size={20} sx={{ color: '#5299FF' }} />
+                                    <Typography variant="body2" sx={{ color: '#7D858D', fontWeight: 500 }}>
+                                        Updating category...
+                                    </Typography>
                                 </Box>
                             )}
-                        </FormControl>
+                        </Box>
                     ) : (
-                        <Typography sx={{ fontSize: 16, color: 'text.secondary', fontStyle: 'italic' }}>
-                            {category || 'N/A'}
-                        </Typography>
+                        <Chip
+                            label={category || 'Not categorized'}
+                            sx={{
+                                fontSize: '0.95rem',
+                                fontWeight: 600,
+                                px: 2,
+                                py: 2.5,
+                                height: 'auto',
+                                backgroundColor: '#5299FF',
+                                color: '#E6EDF2',
+                                boxShadow: '0 2px 8px rgba(82, 153, 255, 0.3)',
+                            }}
+                        />
                     )}
                 </Box>
-                {/* Description */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        Description
-                    </Typography>
+
+                {/* Description Section */}
+                <Box sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    backgroundColor: '#1D2125',
+                    border: '1px solid #373E47',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Box sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1,
+                            backgroundColor: 'rgba(139, 148, 158, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <DescriptionIcon sx={{ color: '#8b949e', fontSize: 20 }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#E6EDF2', fontSize: '1.1rem' }}>
+                            Description
+                        </Typography>
+                    </Box>
                     <EditableField
                         initialValue={issue.description}
                         onSave={(newDesc) => handleSaveField('description', newDesc)}
                         canEdit={canEdit}
                         multiline
-                        placeholder="Add a description..."
+                        placeholder="Add a detailed description..."
                     />
                 </Box>
-                {/* Location */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        Location
-                    </Typography>
-                    <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {canEdit && (
-                            <>
-                                <Button
-                                    size="small"
-                                    startIcon={<MyLocationIcon />}
-                                    onClick={handleGetCurrentLocation}
-                                    sx={{
-                                        minHeight: '32px',
-                                        fontSize: '0.875rem',
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    Use Current Location
-                                </Button>
-                            </>
-                        )}
+
+                {/* Location Section */}
+                <Box sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    backgroundColor: '#1D2125',
+                    border: '1px solid #373E47',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                        <Box sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1,
+                            backgroundColor: 'rgba(63, 185, 80, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <LocationOnIcon sx={{ color: '#3fb950', fontSize: 20 }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#E6EDF2', fontSize: '1.1rem' }}>
+                            Location
+                        </Typography>
                     </Box>
+                    {canEdit && (
+                        <Box sx={{ mb: 2 }}>
+                            <Button
+                                size="medium"
+                                startIcon={<MyLocationIcon />}
+                                onClick={handleGetCurrentLocation}
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: 1.5,
+                                    px: 3,
+                                    py: 1,
+                                    borderWidth: 2,
+                                    borderColor: '#373E47',
+                                    color: '#5299FF',
+                                    fontWeight: 600,
+                                    '&:hover': {
+                                        borderWidth: 2,
+                                        borderColor: '#5299FF',
+                                        backgroundColor: 'rgba(82, 153, 255, 0.1)',
+                                    }
+                                }}
+                            >
+                                Use Current Location
+                            </Button>
+                        </Box>
+                    )}
                     <Box sx={{
-                        height: 300,
+                        height: 350,
                         borderRadius: 2,
                         overflow: 'hidden',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        position: 'relative'
+                        border: '2px solid #373E47',
+                        position: 'relative',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                     }}>
                         <MapContainer
                             center={pendingLocation ? [pendingLocation.lat, pendingLocation.lng] : mapCenter}
@@ -459,72 +642,111 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                             {canEdit && <LocationPicker onLocationSelect={handleLocationSelect} />}
                         </MapContainer>
                         {canEdit && pendingLocation && (
-                            <Box sx={{
-                                position: 'absolute',
-                                top: 16,
-                                right: 16,
-                                display: 'flex',
-                                gap: 2,
-                                zIndex: 1000,
-                            }}>
-                                <Tooltip title="Confirm Location">
-                                    <span>
+                            <Zoom in={true}>
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 16,
+                                    right: 16,
+                                    display: 'flex',
+                                    gap: 2,
+                                    zIndex: 1000,
+                                }}>
+                                    <Tooltip title="Confirm Location" arrow>
+                                        <span>
+                                            <IconButton
+                                                onClick={handleUpdateLocation}
+                                                sx={{
+                                                    bgcolor: '#3fb950',
+                                                    color: '#fff',
+                                                    boxShadow: '0 4px 12px rgba(63, 185, 80, 0.4)',
+                                                    width: 56,
+                                                    height: 56,
+                                                    '&:hover': {
+                                                        bgcolor: '#2ea043',
+                                                        transform: 'scale(1.05)',
+                                                        boxShadow: '0 6px 16px rgba(63, 185, 80, 0.5)',
+                                                    },
+                                                    border: '3px solid #282E33',
+                                                    transition: 'all 0.3s ease',
+                                                }}
+                                                disabled={locationUpdating}
+                                            >
+                                                {locationUpdating
+                                                    ? <CircularProgress size={30} sx={{ color: '#fff' }} />
+                                                    : <CheckCircleIcon sx={{ fontSize: 32 }} />
+                                                }
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                    <Tooltip title="Cancel" arrow>
                                         <IconButton
-                                            onClick={handleUpdateLocation}
+                                            onClick={handleCancelLocation}
                                             sx={{
-                                                bgcolor: '#2e7d32',
+                                                bgcolor: '#f85149',
                                                 color: '#fff',
-                                                boxShadow: 2,
-                                                width: 48,
-                                                height: 48,
-                                                '&:hover': { bgcolor: '#388e3c' },
-                                                border: '2px solid #fff',
+                                                boxShadow: '0 4px 12px rgba(248, 81, 73, 0.4)',
+                                                width: 56,
+                                                height: 56,
+                                                '&:hover': {
+                                                    bgcolor: '#da3633',
+                                                    transform: 'scale(1.05)',
+                                                    boxShadow: '0 6px 16px rgba(248, 81, 73, 0.5)',
+                                                },
+                                                border: '3px solid #282E33',
+                                                transition: 'all 0.3s ease',
                                             }}
                                             disabled={locationUpdating}
                                         >
-                                            {locationUpdating
-                                                ? <CircularProgress size={28} sx={{ color: '#fff' }} />
-                                                : <CheckCircleIcon sx={{ fontSize: 32 }} />
-                                            }
+                                            <CancelIcon sx={{ fontSize: 32 }} />
                                         </IconButton>
-                                    </span>
-                                </Tooltip>
-                                <Tooltip title="Cancel">
-                                    <IconButton
-                                        onClick={handleCancelLocation}
-                                        sx={{
-                                            bgcolor: '#c62828',
-                                            color: '#fff',
-                                            boxShadow: 2,
-                                            width: 48,
-                                            height: 48,
-                                            '&:hover': { bgcolor: '#b71c1c' },
-                                            border: '2px solid #fff',
-                                        }}
-                                        disabled={locationUpdating}
-                                    >
-                                        <CancelIcon sx={{ fontSize: 32 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            </Box>
+                                    </Tooltip>
+                                </Box>
+                            </Zoom>
                         )}
                     </Box>
                     <Typography sx={{ mt: 1, fontSize: 14, color: 'text.secondary' }}>
                         {(pendingLocation || location)
-                            ? `Lat: ${(pendingLocation || location).lat}, Lng: ${(pendingLocation || location).lng}`
+                            ? `Latitude: ${(pendingLocation || location).lat}, Longitude: ${(pendingLocation || location).lng}`
                             : 'No location selected'}
                     </Typography>
-                    {canEdit && (
-                        <Typography sx={{ fontSize: 13, color: 'warning.main', mt: 0.5 }}>
-                            {pendingLocation && "Click the tick to update location or cross to discard."}
-                        </Typography>
-                    )}
                 </Box>
-                {/* Attachments */}
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        Attachments
-                    </Typography>
+
+                {/* Attachments Section */}
+                <Box sx={{
+                    p: 3,
+                    borderRadius: 2,
+                    backgroundColor: '#1D2125',
+                    border: '1px solid #373E47',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                        <Box sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1,
+                            backgroundColor: 'rgba(82, 153, 255, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <ImageIcon sx={{ color: '#5299FF', fontSize: 20 }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#E6EDF2', fontSize: '1.1rem' }}>
+                            Attachments
+                        </Typography>
+                        {localAttachments.length > 0 && (
+                            <Chip
+                                label={localAttachments.length}
+                                size="small"
+                                sx={{
+                                    ml: 1,
+                                    fontWeight: 700,
+                                    backgroundColor: 'rgba(82, 153, 255, 0.2)',
+                                    color: '#5299FF',
+                                    border: '1px solid rgba(82, 153, 255, 0.3)',
+                                }}
+                            />
+                        )}
+                    </Box>
                     <Grid container spacing={2}>
                         {localAttachments.length === 0 && !canUploadProof && (
                             <Grid item xs={12}>
@@ -686,45 +908,81 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     </Grid>
                 </Box>
             </Paper>
-            {/* Lightbox Dialog component */}
+
+            {/* Lightbox Dialog */}
             <Dialog
                 open={lightboxOpen}
                 onClose={() => setLightboxOpen(false)}
                 maxWidth="lg"
                 PaperProps={{
-                    sx: { bgcolor: 'transparent', boxShadow: 'none', p: 0, m: 0 }
+                    sx: {
+                        bgcolor: 'transparent',
+                        boxShadow: 'none',
+                        p: 0,
+                        m: 0,
+                        maxWidth: '95vw',
+                        maxHeight: '95vh',
+                    }
                 }}
                 onKeyDown={handleLightboxKeyDown}
+                sx={{
+                    '& .MuiBackdrop-root': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                    }
+                }}
             >
-                <IconButton
-                    onClick={() => setLightboxOpen(false)}
-                    sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        color: 'white',
-                        bgcolor: 'rgba(0, 0, 0, 0.5)',
-                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
-                    }}
-                    aria-label="Close image preview"
-                >
-                    <CancelIcon />
-                </IconButton>
-                <DialogContent sx={{ p: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <img
-                        src={selectedImage}
-                        alt="Full screen attachment"
-                        style={{
-                            maxWidth: '100%',
-                            maxHeight: '90vh',
-                            display: 'block',
-                            borderRadius: 8,
-                            boxShadow: '0 4px 32px 0 rgba(0,0,0,0.32)'
-                        }}
-                        onClick={() => setLightboxOpen(false)}
-                    />
-                </DialogContent>
+                <Zoom in={lightboxOpen}>
+                    <Box>
+                        <IconButton
+                            onClick={() => setLightboxOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                color: 'white',
+                                bgcolor: 'rgba(248, 81, 73, 0.9)',
+                                backdropFilter: 'blur(8px)',
+                                width: 48,
+                                height: 48,
+                                boxShadow: '0 4px 16px rgba(248, 81, 73, 0.4)',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    bgcolor: '#f85149',
+                                    transform: 'scale(1.1) rotate(90deg)',
+                                    boxShadow: '0 6px 20px rgba(248, 81, 73, 0.5)',
+                                }
+                            }}
+                            aria-label="Close image preview"
+                        >
+                            <CancelIcon sx={{ fontSize: 28 }} />
+                        </IconButton>
+                        <DialogContent sx={{
+                            p: 0,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            minHeight: '50vh',
+                        }}>
+                            <img
+                                src={selectedImage}
+                                alt="Full screen attachment"
+                                style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '90vh',
+                                    display: 'block',
+                                    borderRadius: 12,
+                                    boxShadow: '0 8px 48px rgba(0, 0, 0, 0.8)',
+                                    cursor: 'pointer',
+                                    border: '2px solid #373E47',
+                                }}
+                                onClick={() => setLightboxOpen(false)}
+                            />
+                        </DialogContent>
+                    </Box>
+                </Zoom>
             </Dialog>
+
             {/* Delete Confirmation Dialog */}
             {attachmentToDelete && (
                 <DeleteConfirmationDialog
