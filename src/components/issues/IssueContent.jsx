@@ -15,16 +15,25 @@ import {
     CircularProgress,
     Tooltip,
     Fade,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import {
     AttachFile as AttachFileIcon,
-    Check as CheckIcon,
-    Close as CloseIcon,
+    CheckCircle as CheckCircleIcon,
+    Cancel as CancelIcon,
     ZoomIn as ZoomInIcon,
     Delete as DeleteIcon,
+    MyLocation as MyLocationIcon,
 } from '@mui/icons-material';
 
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
 import { updateIssue, deleteAttachment, addAttachmentsToIssue } from '../../api/issuesApi';
+import { useCategories } from '../../hooks/useLookups';
 import { showNotification } from '../../state/notificationSlice';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
@@ -75,7 +84,7 @@ function EditableField({ initialValue, onSave, canEdit, multiline = false, varia
                         onClick={handleSave}
                         variant="contained"
                         size="small"
-                        startIcon={<CheckIcon />}
+                        startIcon={<CheckCircleIcon />}
                         sx={{ fontWeight: 600 }}
                     >
                         Save
@@ -84,7 +93,7 @@ function EditableField({ initialValue, onSave, canEdit, multiline = false, varia
                         onClick={handleCancel}
                         variant="outlined"
                         size="small"
-                        startIcon={<CloseIcon />}
+                        startIcon={<CancelIcon />}
                         sx={{ fontWeight: 500 }}
                     >
                         Cancel
@@ -131,6 +140,15 @@ EditableField.propTypes = {
     placeholder: PropTypes.string,
 };
 
+function LocationPicker({ onLocationSelect }) {
+    useMapEvents({
+        click(e) {
+            onLocationSelect(e.latlng);
+        },
+    });
+    return null;
+}
+
 function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState('');
@@ -138,23 +156,69 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
     const [uploading, setUploading] = useState(false);
     const [localAttachments, setLocalAttachments] = useState(issue.attachments);
 
+    const { data: categoriesData, isLoading: areCategoriesLoading } = useCategories();
+    const categories = categoriesData || [];
+
+    const [category, setCategory] = useState(issue.category || '');
+    const [categoryUpdating, setCategoryUpdating] = useState(false);
+
+    const [location, setLocation] = useState(
+        issue.latitude && issue.longitude
+            ? { lat: issue.latitude, lng: issue.longitude }
+            : null
+    );
+    const [mapCenter, setMapCenter] = useState(
+        issue.latitude && issue.longitude
+            ? [issue.latitude, issue.longitude]
+            : [18.61, 73.72]
+    );
+    const [pendingLocation, setPendingLocation] = useState(null);
+    const [locationUpdating, setLocationUpdating] = useState(false);
+
+    useEffect(() => {
+        setCategory(issue.category || '');
+        setLocation(issue.latitude && issue.longitude ? { lat: issue.latitude, lng: issue.longitude } : null);
+        setMapCenter(issue.latitude && issue.longitude ? [issue.latitude, issue.longitude] : [18.61, 73.72]);
+        setLocalAttachments(issue.attachments);
+        setPendingLocation(null);
+    }, [issue]);
+
     const fileInputRef = useRef(null);
 
     const queryClient = useQueryClient();
     const dispatch = useDispatch();
 
-    useEffect(() => {
-        setLocalAttachments(issue.attachments);
-    }, [issue.attachments]);
-
-    const { mutate: updateIssueMutation } = useMutation({
-        mutationFn: updateIssue,
-        onSuccess: () => {
+    const updateCategoryMutation = useMutation({
+        mutationFn: ({ categoryId }) => updateIssue({ issueId: issue.id, updateData: { categoryId } }),
+        onMutate: () => setCategoryUpdating(true),
+        onSuccess: (updated) => {
+            setCategory(updated.category);
+            setCategoryUpdating(false);
             queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
-            dispatch(showNotification({ message: 'Issue updated successfully', severity: 'success' }));
+            dispatch(showNotification({ message: 'Category updated successfully', severity: 'success' }));
         },
         onError: (error) => {
-            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update issue', severity: 'error' }));
+            setCategory(issue.category || '');
+            setCategoryUpdating(false);
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update category', severity: 'error' }));
+        }
+    });
+
+    const updateLocationMutation = useMutation({
+        mutationFn: ({ latitude, longitude }) => updateIssue({ issueId: issue.id, updateData: { latitude, longitude } }),
+        onMutate: () => setLocationUpdating(true),
+        onSuccess: (updated) => {
+            setLocation({ lat: updated.latitude, lng: updated.longitude });
+            setMapCenter([updated.latitude, updated.longitude]);
+            setPendingLocation(null);
+            setLocationUpdating(false);
+            queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            dispatch(showNotification({ message: 'Location updated successfully', severity: 'success' }));
+        },
+        onError: (error) => {
+            setPendingLocation(null);
+            setLocationUpdating(false);
+            dispatch(showNotification({ message: error.response?.data?.message || 'Failed to update location', severity: 'error' }));
         }
     });
 
@@ -213,7 +277,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
     });
 
     const handleSaveField = (fieldName, value) => {
-        updateIssueMutation({ issueId: issue.id, updateData: { [fieldName]: value } });
+        updateIssue({ issueId: issue.id, updateData: { [fieldName]: value } });
     };
 
     const handleFileChange = (event) => {
@@ -238,6 +302,48 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
         if (e.key === 'Escape') setLightboxOpen(false);
     };
 
+    const handleCategoryChange = (e) => {
+        const selectedCategoryName = e.target.value;
+        setCategory(selectedCategoryName);
+        const selectedCategoryObj = categoriesData?.find(c => c.name === selectedCategoryName);
+        if (selectedCategoryObj) {
+            updateCategoryMutation.mutate({ categoryId: selectedCategoryObj.id });
+        } else {
+            dispatch(showNotification({ message: 'Invalid category selected', severity: 'error' }));
+        }
+    };
+
+    const handleLocationSelect = (latlng) => {
+        setPendingLocation(latlng);
+    };
+
+    const handleUpdateLocation = () => {
+        if (pendingLocation) {
+            updateLocationMutation.mutate({
+                latitude: pendingLocation.lat,
+                longitude: pendingLocation.lng
+            });
+        }
+    };
+
+    const handleCancelLocation = () => {
+        setPendingLocation(null);
+    };
+
+    const handleGetCurrentLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                const newPos = { lat: latitude, lng: longitude };
+                setPendingLocation(newPos);
+                setMapCenter([latitude, longitude]);
+            },
+            () => {
+                dispatch(showNotification({ message: 'Could not get your location. Please select manually.', severity: 'error' }));
+            }
+        );
+    };
+
     return (
         <>
             <Paper sx={{
@@ -257,6 +363,42 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     variant="h4"
                     placeholder="Enter issue title..."
                 />
+                {/* Category */}
+                <Box>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                        Category
+                    </Typography>
+                    {canEdit ? (
+                        <FormControl>
+                            <InputLabel>Category</InputLabel>
+                            <Select
+                                value={category}
+                                label="Category"
+                                onChange={handleCategoryChange}
+                                disabled={areCategoriesLoading || categoryUpdating}
+                                sx={{
+                                    minWidth: 180,
+                                    backgroundColor: '#23272e',
+                                    borderRadius: 2,
+                                }}
+                            >
+                                {categories.map((cat) => (
+                                    <MenuItem key={cat.id} value={cat.name}>{cat.name}</MenuItem>
+                                ))}
+                            </Select>
+                            {categoryUpdating && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                                    <CircularProgress size={18} sx={{ mr: 1 }} />
+                                    <Typography variant="caption">Updating...</Typography>
+                                </Box>
+                            )}
+                        </FormControl>
+                    ) : (
+                        <Typography sx={{ fontSize: 16, color: 'text.secondary', fontStyle: 'italic' }}>
+                            {category || 'N/A'}
+                        </Typography>
+                    )}
+                </Box>
                 {/* Description */}
                 <Box>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -269,6 +411,114 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                         multiline
                         placeholder="Add a description..."
                     />
+                </Box>
+                {/* Location */}
+                <Box>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                        Location
+                    </Typography>
+                    <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {canEdit && (
+                            <>
+                                <Button
+                                    size="small"
+                                    startIcon={<MyLocationIcon />}
+                                    onClick={handleGetCurrentLocation}
+                                    sx={{
+                                        minHeight: '32px',
+                                        fontSize: '0.875rem',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Use Current Location
+                                </Button>
+                            </>
+                        )}
+                    </Box>
+                    <Box sx={{
+                        height: 300,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        position: 'relative'
+                    }}>
+                        <MapContainer
+                            center={pendingLocation ? [pendingLocation.lat, pendingLocation.lng] : mapCenter}
+                            zoom={15}
+                            style={{ height: '100%', width: '100%' }}
+                            key={(pendingLocation ? [pendingLocation.lat, pendingLocation.lng] : mapCenter).join(',')}
+                        >
+                            <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            />
+                            {(pendingLocation || location) && (
+                                <Marker position={pendingLocation ? [pendingLocation.lat, pendingLocation.lng] : [location.lat, location.lng]} />
+                            )}
+                            {canEdit && <LocationPicker onLocationSelect={handleLocationSelect} />}
+                        </MapContainer>
+                        {canEdit && pendingLocation && (
+                            <Box sx={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                display: 'flex',
+                                gap: 2,
+                                zIndex: 1000,
+                            }}>
+                                <Tooltip title="Confirm Location">
+                                    <span>
+                                        <IconButton
+                                            onClick={handleUpdateLocation}
+                                            sx={{
+                                                bgcolor: '#2e7d32',
+                                                color: '#fff',
+                                                boxShadow: 2,
+                                                width: 48,
+                                                height: 48,
+                                                '&:hover': { bgcolor: '#388e3c' },
+                                                border: '2px solid #fff',
+                                            }}
+                                            disabled={locationUpdating}
+                                        >
+                                            {locationUpdating
+                                                ? <CircularProgress size={28} sx={{ color: '#fff' }} />
+                                                : <CheckCircleIcon sx={{ fontSize: 32 }} />
+                                            }
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Cancel">
+                                    <IconButton
+                                        onClick={handleCancelLocation}
+                                        sx={{
+                                            bgcolor: '#c62828',
+                                            color: '#fff',
+                                            boxShadow: 2,
+                                            width: 48,
+                                            height: 48,
+                                            '&:hover': { bgcolor: '#b71c1c' },
+                                            border: '2px solid #fff',
+                                        }}
+                                        disabled={locationUpdating}
+                                    >
+                                        <CancelIcon sx={{ fontSize: 32 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+                        )}
+                    </Box>
+                    <Typography sx={{ mt: 1, fontSize: 14, color: 'text.secondary' }}>
+                        {(pendingLocation || location)
+                            ? `Lat: ${(pendingLocation || location).lat}, Lng: ${(pendingLocation || location).lng}`
+                            : 'No location selected'}
+                    </Typography>
+                    {canEdit && (
+                        <Typography sx={{ fontSize: 13, color: 'warning.main', mt: 0.5 }}>
+                            {pendingLocation && "Click the tick to update location or cross to discard."}
+                        </Typography>
+                    )}
                 </Box>
                 {/* Attachments */}
                 <Box>
@@ -458,7 +708,7 @@ function IssueContent({ issue, canEdit, canUploadProof, canDeleteAttachments }) 
                     }}
                     aria-label="Close image preview"
                 >
-                    <CloseIcon />
+                    <CancelIcon />
                 </IconButton>
                 <DialogContent sx={{ p: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <img

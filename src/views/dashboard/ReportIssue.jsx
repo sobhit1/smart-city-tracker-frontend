@@ -135,7 +135,6 @@ function ReportIssue() {
     setValue('files', newFiles, { shouldValidate: true });
   };
 
-
   return (
     <Box
       sx={{
@@ -361,6 +360,11 @@ function ReportIssue() {
                               <LocationPicker onLocationSelect={(latlng) => setValue('location', latlng, { shouldValidate: true })} />
                             </MapContainer>
                           </Box>
+                          {selectedLocation && (
+                            <Typography sx={{ mt: 1, fontSize: 14, color: 'text.secondary' }}>
+                              Lat: {selectedLocation.lat}, Lng: {selectedLocation.lng}
+                            </Typography>
+                          )}
                           {errors.location && (
                             <FormHelperText error sx={{ px: 1, pt: 1, fontSize: '0.875rem' }}>
                               {errors.location.message}

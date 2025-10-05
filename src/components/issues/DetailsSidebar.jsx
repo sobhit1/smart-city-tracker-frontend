@@ -62,7 +62,7 @@ function normalizeIssue(issue, statuses, priorities, users) {
     if (reporterObj && !reporterObj.fullName && reporterObj.name) {
         reporterObj.fullName = reporterObj.name;
     }
-    
+
     const startDate = issue.startDate
         ? (issue.startDate.includes('T') ? issue.startDate.split('T')[0] : issue.startDate)
         : '';
@@ -121,6 +121,7 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
                 ...updated,
             }));
             queryClient.invalidateQueries({ queryKey: ['issue', issue.id] });
+            queryClient.invalidateQueries({ queryKey: ['issues'] });
             dispatch(showNotification({ message: 'Issue updated successfully', severity: 'success' }));
         },
         onError: (error) => {

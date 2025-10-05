@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Box, Typography, Button } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useIssue } from '../../hooks/useIssues';
 import Loader from '../../components/Loader';
@@ -13,11 +15,21 @@ import CommentsSection from '../../components/issues/comments/CommentsSection';
 
 function IssueDetails() {
     const { issueId } = useParams();
+    const queryClient = useQueryClient();
     const { user } = useSelector((state) => state.auth);
-    const { data: issue, isLoading, isError, error } = useIssue(issueId);
+
+    const { data: issue, isLoading, isError, error, refetch } = useIssue(issueId, {
+        refetchOnMount: true,
+        refetchOnWindowFocus: true,
+        staleTime: 0,
+    });
 
     const isAdmin = user?.roles?.includes('ROLE_ADMIN');
     const isStaff = user?.roles?.includes('ROLE_STAFF');
+
+    useEffect(() => {
+        refetch();
+    }, [issueId]);
 
     if (isLoading) return <Loader />;
     if (isError) return <Typography color="error">Error fetching issue: {error.message}</Typography>;
@@ -45,6 +57,9 @@ function IssueDetails() {
                 to={DASHBOARD_PATH}
                 startIcon={<ArrowBackIcon />}
                 sx={{ mb: 2 }}
+                onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['issues'] });
+                }}
             >
                 Back to Dashboard
             </Button>
@@ -58,7 +73,7 @@ function IssueDetails() {
                     gap: 3,
                 }}
             >
-                {/* Main content (left on desktop, below sidebar on mobile) */}
+                {/* Main content */}
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <IssueContent
                         issue={issue}
@@ -74,7 +89,7 @@ function IssueDetails() {
                     />
                 </Box>
 
-                {/* Sidebar (right on desktop, top on mobile) */}
+                {/* Sidebar */}
                 <Box
                     sx={{
                         width: { xs: '100%', md: 320 },
