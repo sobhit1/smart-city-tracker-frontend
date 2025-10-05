@@ -61,6 +61,8 @@ function Comment({
     const [repliesCollapsed, setRepliesCollapsed] = useState(false);
     const menuOpen = Boolean(anchorEl);
     const menuButtonRef = useRef(null);
+    const inputRef = useRef(null);
+    const editInputRef = useRef(null);
 
     const dispatch = useDispatch();
 
@@ -118,6 +120,34 @@ function Comment({
         const mentionText = `@[${comment?.author?.name || 'Unknown User'}]${MENTION_MARKER} `;
         setReplyText(mentionText);
         setIsReplying(true);
+        
+        setTimeout(() => {
+            if (inputRef.current) {
+                const textarea = inputRef.current.querySelector('textarea');
+                if (textarea) {
+                    textarea.focus();
+                    const cursorPosition = mentionText.length;
+                    textarea.setSelectionRange(cursorPosition, cursorPosition);
+                }
+            }
+        }, 0);
+    };
+
+    const handleEditClick = () => {
+        setIsEditing(true);
+        setAnchorEl(null);
+        setEditText(comment.text);
+        
+        setTimeout(() => {
+            if (editInputRef.current) {
+                const textarea = editInputRef.current.querySelector('textarea');
+                if (textarea) {
+                    textarea.focus();
+                    const cursorPosition = comment.text.length;
+                    textarea.setSelectionRange(cursorPosition, cursorPosition);
+                }
+            }
+        }, 0);
     };
 
     const handleFileChange = (event) => {
@@ -308,7 +338,7 @@ function Comment({
                                 onFileChange={handleFileChange}
                                 onRemoveFile={handleRemoveFile}
                                 isSubmitting={isUploading}
-                                autoFocus={true}
+                                inputRef={editInputRef}
                             />
                             {isUploading && (
                                 <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -440,7 +470,7 @@ function Comment({
                                 onRemoveFile={handleRemoveFile}
                                 isSubmitting={false}
                                 placeholder="Write a reply..."
-                                autoFocus={true}
+                                inputRef={inputRef}
                             />
                         </Box>
                     </Collapse>
@@ -471,10 +501,7 @@ function Comment({
                     >
                         {canEditComment && (
                             <MenuItem
-                                onClick={() => {
-                                    setIsEditing(true);
-                                    setAnchorEl(null);
-                                }}
+                                onClick={handleEditClick}
                                 sx={{
                                     py: 0.5,
                                     px: 1,

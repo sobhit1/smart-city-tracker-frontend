@@ -54,12 +54,12 @@ function SidebarRow({ label, children, hasEdit = false, onClick }) {
                 justifyContent: 'flex-end'
             }}>
                 {children}
-                <Fade in={hovered && hasEdit} timeout={200}>
+                <Fade in={hasEdit} timeout={200}>
                     <EditIcon sx={{
                         fontSize: 14,
                         color: '#5299FF',
                         ml: 0.5,
-                        opacity: hovered && hasEdit ? 1 : 0
+                        opacity: hasEdit ? 1 : 0
                     }} />
                 </Fade>
             </Box>

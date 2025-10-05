@@ -37,7 +37,11 @@ function CommentInput({
     isSubmitting,
     placeholder,
     autoFocus,
+    inputRef,
 }) {
+    const internalInputRef = useRef(null);
+    const actualInputRef = inputRef || internalInputRef;
+
     const [mentionAnchorEl, setMentionAnchorEl] = useState(null);
     const [mentionSearch, setMentionSearch] = useState('');
     const [mentionStartPos, setMentionStartPos] = useState(null);
@@ -45,7 +49,6 @@ function CommentInput({
     const [isFocused, setIsFocused] = useState(false);
     const [fileError, setFileError] = useState('');
     const [charCount, setCharCount] = useState(value.length);
-    const inputRef = useRef(null);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -76,7 +79,7 @@ function CommentInput({
                 if (!hasMentionBefore) {
                     setMentionSearch(textAfterAt);
                     setMentionStartPos(lastAtIndex);
-                    if (inputRef.current) setMentionAnchorEl(inputRef.current);
+                    if (actualInputRef.current) setMentionAnchorEl(actualInputRef.current);
                     return;
                 }
             }
@@ -98,7 +101,7 @@ function CommentInput({
 
             setTimeout(() => {
                 const newCursorPos = mentionStartPos + mentionText.length + 2;
-                const input = inputRef.current?.querySelector('textarea');
+                const input = actualInputRef.current?.querySelector('textarea');
                 if (input) {
                     input.focus();
                     input.setSelectionRange(newCursorPos, newCursorPos);
@@ -302,7 +305,7 @@ function CommentInput({
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={handleBlur}
-                ref={inputRef}
+                ref={actualInputRef}
                 autoFocus={autoFocus}
                 inputProps={{
                     maxLength: MAX_CHARS,
@@ -480,6 +483,7 @@ CommentInput.propTypes = {
     isSubmitting: PropTypes.bool,
     placeholder: PropTypes.string,
     autoFocus: PropTypes.bool,
+    inputRef: PropTypes.object,
 };
 
 export default CommentInput;

@@ -15,7 +15,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 
 import SidebarRow from './SidebarRow';
 
-function ReporterAssignee({ label, value, onChange, hasEdit = false, availableUsers, avatarColor }) {
+function ReporterAssignee({ label, value, onChange = () => {}, hasEdit = false, availableUsers, avatarColor }) {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedValue, setSelectedValue] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -320,7 +320,7 @@ function ReporterAssignee({ label, value, onChange, hasEdit = false, availableUs
 ReporterAssignee.propTypes = {
     label: PropTypes.string.isRequired,
     value: PropTypes.object,
-    onChange: PropTypes.func.isRequired,
+    onChange: PropTypes.func,
     hasEdit: PropTypes.bool,
     availableUsers: PropTypes.array.isRequired,
     avatarColor: PropTypes.string.isRequired,

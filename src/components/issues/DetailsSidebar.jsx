@@ -33,10 +33,12 @@ function normalizeIssue(issue, statuses, priorities, users) {
     if (typeof statusObj === 'string') {
         statusObj = statuses.find(s => s.name === issue.status) || { id: '', name: issue.status };
     }
+
     let priorityObj = issue.priority;
     if (typeof priorityObj === 'string') {
         priorityObj = priorities.find(p => p.name === issue.priority) || { id: '', name: issue.priority };
     }
+
     let assigneeObj = issue.assignee;
     if (assigneeObj && typeof assigneeObj === 'object' && assigneeObj.id) {
         assigneeObj = users.find(u => u.id === assigneeObj.id) || assigneeObj;
@@ -45,6 +47,10 @@ function normalizeIssue(issue, statuses, priorities, users) {
     } else if (!assigneeObj) {
         assigneeObj = null;
     }
+    if (assigneeObj && !assigneeObj.fullName && assigneeObj.name) {
+        assigneeObj.fullName = assigneeObj.name;
+    }
+
     let reporterObj = issue.reporter;
     if (reporterObj && typeof reporterObj === 'object' && reporterObj.id) {
         reporterObj = users.find(u => u.id === reporterObj.id) || reporterObj;
@@ -53,9 +59,14 @@ function normalizeIssue(issue, statuses, priorities, users) {
     } else if (!reporterObj) {
         reporterObj = null;
     }
+    if (reporterObj && !reporterObj.fullName && reporterObj.name) {
+        reporterObj.fullName = reporterObj.name;
+    }
+    
     const startDate = issue.startDate
         ? (issue.startDate.includes('T') ? issue.startDate.split('T')[0] : issue.startDate)
         : '';
+
     const dueDate = issue.dueDate
         ? (issue.dueDate.includes('T') ? issue.dueDate.split('T')[0] : issue.dueDate)
         : '';
@@ -70,7 +81,7 @@ function normalizeIssue(issue, statuses, priorities, users) {
     };
 }
 
-function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue, isAdmin }) {
+function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue }) {
     const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [statusEdit, setStatusEdit] = useState(false);
@@ -192,36 +203,42 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
 
     return (
         <>
-            <Box sx={{ width: '320px', position: 'sticky', top: '16px' }}>
+            <Box
+                sx={{
+                    width: '320px',
+                    position: 'sticky',
+                    top: '16px',
+                    backgroundColor: '#181A1B',
+                    mb: 2,
+                    overflow: 'hidden',
+                }}
+            >
+                {/* Header with Details and icons */}
                 <Box
                     sx={{
-                        backgroundColor: '#282E33',
-                        border: '1px solid #373E47',
-                        borderRadius: 1,
-                        mb: 2,
-                        overflow: 'hidden'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        px: 2,
+                        py: 1.5,
+                        backgroundColor: '#23272e',
+                        boxShadow: '0 2px 8px 0 rgba(20,23,28,0.12)',
+                        zIndex: 1,
+                        borderBottom: '1px solid #23272e',
                     }}
                 >
-                    <Box
+                    <Typography
                         sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            px: 2,
-                            py: 1.5
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: '#fff',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
                         }}
                     >
-                        <Typography
-                            sx={{
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                color: '#7D858D',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                            }}
-                        >
-                            Details
-                        </Typography>
+                        Details
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         {canDeleteIssue && (
                             <Tooltip title="Delete Issue">
                                 <IconButton
@@ -231,166 +248,163 @@ function DetailsSidebar({ issue, canChangeStatus, canAssignIssue, canDeleteIssue
                                         setDeleteDialogOpen(true);
                                     }}
                                     sx={{
+                                        color: '#b0b6bc',
                                         '&:hover': {
                                             backgroundColor: 'rgba(248, 81, 73, 0.1)',
                                             color: '#f85149'
                                         }
                                     }}
                                 >
-                                    <DeleteIcon sx={{ fontSize: 18 }} />
+                                    <DeleteIcon sx={{ fontSize: 22 }} />
                                 </IconButton>
                             </Tooltip>
                         )}
                     </Box>
+                </Box>
 
-                    <Box sx={{ p: 2 }}>
-                        {/* Status */}
-                        <SidebarRow label="Status" hasEdit={canChangeStatus && !statusEdit} onClick={() => canChangeStatus && setStatusEdit(true)}>
-                            {canChangeStatus && statusEdit ? (
-                                <ClickAwayListener onClickAway={handleStatusClickAway}>
-                                    <Fade in={true} timeout={200}>
-                                        <Box ref={statusSelectRef}>
-                                            <FormControl size="small" fullWidth sx={{ minWidth: 120 }}>
-                                                <Select
-                                                    value={normalizedIssue.status.id}
-                                                    onChange={(e) => {
-                                                        handleUpdate({ statusId: e.target.value });
-                                                        setStatusEdit(false);
+                <Box sx={{ p: 2 }}>
+                    {/* Status */}
+                    <SidebarRow label="Status" hasEdit={canChangeStatus && !statusEdit} onClick={() => canChangeStatus && setStatusEdit(true)}>
+                        {canChangeStatus && statusEdit ? (
+                            <ClickAwayListener onClickAway={handleStatusClickAway}>
+                                <Fade in={true} timeout={200}>
+                                    <Box ref={statusSelectRef}>
+                                        <FormControl size="small" fullWidth sx={{ minWidth: 120 }}>
+                                            <Select
+                                                value={normalizedIssue.status.id}
+                                                onChange={(e) => {
+                                                    handleUpdate({ statusId: e.target.value });
+                                                    setStatusEdit(false);
+                                                    setStatusDropdownOpen(false);
+                                                }}
+                                                onOpen={() => setStatusDropdownOpen(true)}
+                                                onClose={() => {
+                                                    setStatusDropdownOpen(false);
+                                                    setStatusEdit(false);
+                                                }}
+                                                autoFocus
+                                                sx={{
+                                                    '& .MuiSelect-select': {
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        py: 0.5,
+                                                        px: 1,
+                                                        minHeight: '32px',
+                                                        fontWeight: 700,
+                                                        fontSize: '13px',
+                                                        border: 'none'
+                                                    },
+                                                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                                                    backgroundColor: '#23272e',
+                                                    borderRadius: '8px',
+                                                }}
+                                                renderValue={() => (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        {getStatusChip(normalizedIssue.status.name)}
+                                                    </Box>
+                                                )}
+                                                MenuProps={{
+                                                    PaperProps: {
+                                                        sx: {
+                                                            backgroundColor: '#23272e',
+                                                            border: '1px solid #373E47',
+                                                            borderRadius: '8px',
+                                                            mt: 0.5,
+                                                        }
+                                                    }
+                                                }}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Escape') {
                                                         setStatusDropdownOpen(false);
-                                                    }}
-                                                    onOpen={() => setStatusDropdownOpen(true)}
-                                                    onClose={() => {
-                                                        setStatusDropdownOpen(false);
                                                         setStatusEdit(false);
-                                                    }}
-                                                    autoFocus
-                                                    sx={{
-                                                        '& .MuiSelect-select': {
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            py: 0.5,
-                                                            px: 1,
-                                                            minHeight: '32px',
-                                                            fontWeight: 700,
-                                                            fontSize: '13px',
-                                                            border: 'none'
-                                                        },
-                                                        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                                                        backgroundColor: '#23272e',
-                                                        borderRadius: '8px',
-                                                    }}
-                                                    renderValue={() => (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                            {getStatusChip(normalizedIssue.status.name)}
-                                                        </Box>
-                                                    )}
-                                                    MenuProps={{
-                                                        PaperProps: {
-                                                            sx: {
-                                                                backgroundColor: '#23272e',
-                                                                border: '1px solid #373E47',
-                                                                borderRadius: '8px',
-                                                                mt: 0.5,
-                                                            }
-                                                        }
-                                                    }}
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Escape') {
-                                                            setStatusDropdownOpen(false);
-                                                            setStatusEdit(false);
-                                                        }
-                                                    }}
-                                                >
-                                                    {(() => {
-                                                        const current = normalizedIssue?.status?.name || 'OPEN';
-                                                        let allowed = [];
-                                                        if (current === 'OPEN') {
-                                                            allowed = statuses.filter(s => ['OPEN', 'IN_PROGRESS'].includes(s.name));
-                                                        } else if (current === 'IN_PROGRESS') {
-                                                            allowed = statuses.filter(s => ['IN_PROGRESS', 'RESOLVED'].includes(s.name));
-                                                        } else if (current === 'RESOLVED') {
-                                                            allowed = statuses.filter(s => ['RESOLVED'].includes(s.name));
-                                                        }
-                                                        return allowed.map((status) => (
-                                                            <MenuItem key={status.id} value={status.id}>
-                                                                {getStatusChip(status?.name || 'OPEN')}
-                                                            </MenuItem>
-                                                        ));
-                                                    })()}
-                                                </Select>
-                                            </FormControl>
-                                        </Box>
-                                    </Fade>
-                                </ClickAwayListener>
-                            ) : (
-                                getStatusChip(normalizedIssue?.status?.name || 'OPEN')
-                            )}
-                        </SidebarRow>
+                                                    }
+                                                }}
+                                            >
+                                                {(() => {
+                                                    const current = normalizedIssue?.status?.name || 'OPEN';
+                                                    let allowed = [];
+                                                    if (current === 'OPEN') {
+                                                        allowed = statuses.filter(s => ['OPEN', 'IN_PROGRESS'].includes(s.name));
+                                                    } else if (current === 'IN_PROGRESS') {
+                                                        allowed = statuses.filter(s => ['IN_PROGRESS', 'RESOLVED'].includes(s.name));
+                                                    } else if (current === 'RESOLVED') {
+                                                        allowed = statuses.filter(s => ['RESOLVED'].includes(s.name));
+                                                    }
+                                                    return allowed.map((status) => (
+                                                        <MenuItem key={status.id} value={status.id}>
+                                                            {getStatusChip(status?.name || 'OPEN')}
+                                                        </MenuItem>
+                                                    ));
+                                                })()}
+                                            </Select>
+                                        </FormControl>
+                                    </Box>
+                                </Fade>
+                            </ClickAwayListener>
+                        ) : (
+                            getStatusChip(normalizedIssue?.status?.name || 'OPEN')
+                        )}
+                    </SidebarRow>
 
-                        {/* Assignee */}
-                        <ReporterAssignee
-                            label={'Assignee'}
-                            value={normalizedIssue.assignee}
-                            onChange={(newAssignee) =>
-                                handleUpdate({ assigneeId: newAssignee ? newAssignee.id : 0 })
-                            }
-                            hasEdit={canAssignIssue}
-                            availableUsers={availableUsers}
-                            avatarColor="#FF5722"
-                        />
-                        {/* Reporter */}
-                        <ReporterAssignee
-                            label={'Reporter'}
-                            value={normalizedIssue.reporter}
-                            onChange={(newReporter) => handleUpdate({ reporterId: newReporter.id })}
-                            hasEdit={isAdmin}
-                            availableUsers={availableUsers}
-                            avatarColor="#F44336"
-                        />
-                        {/* Priority */}
-                        <PriorityRow
-                            value={normalizedIssue?.priority?.name || 'Medium'}
-                            onChange={(newPriority) => handleUpdate({ priorityId: newPriority.id })}
-                            hasEdit={canChangeStatus}
-                            availablePriorities={priorities}
-                        />
+                    {/* Assignee */}
+                    <ReporterAssignee
+                        label={'Assignee'}
+                        value={normalizedIssue.assignee}
+                        onChange={(newAssignee) => handleUpdate({ assigneeId: newAssignee ? newAssignee.id : 0 })}
+                        hasEdit={canAssignIssue}
+                        availableUsers={availableUsers}
+                        avatarColor="#FF5722"
+                    />
+                    {/* Reporter */}
+                    <ReporterAssignee
+                        label={'Reporter'}
+                        value={normalizedIssue.reporter}
+                        availableUsers={availableUsers}
+                        avatarColor="#F44336"
+                    />
+                    {/* Priority */}
+                    <PriorityRow
+                        value={normalizedIssue?.priority?.name || 'Medium'}
+                        onChange={(newPriority) => handleUpdate({ priorityId: newPriority.id })}
+                        hasEdit={canChangeStatus}
+                        availablePriorities={priorities}
+                    />
 
-                        {/* Date Reported */}
-                        <SidebarRow label="Date Reported">
-                            <Typography sx={{ fontSize: '13px', color: '#E6EDF2' }}>
-                                {normalizedIssue.createdAt
-                                    ? new Date(normalizedIssue.createdAt).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                    })
-                                    : ''}
-                            </Typography>
-                        </SidebarRow>
-
-                        {/* Start Date */}
-                        <DatePickerRow
-                            label="Start Date"
-                            value={normalizedIssue.startDate}
-                            onChange={(newDate) =>
-                                handleUpdate({
-                                    startDate: newDate ? new Date(newDate).toISOString() : null
+                    {/* Date Reported */}
+                    <SidebarRow label="Date Reported">
+                        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#E6EDF2' }}>
+                            {normalizedIssue.createdAt
+                                ? new Date(normalizedIssue.createdAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
                                 })
-                            }
-                            hasEdit={canChangeStatus}
-                        />
-                        {/* End Date */}
-                        <DatePickerRow
-                            label="End Date"
-                            value={normalizedIssue.dueDate}
-                            onChange={(newDate) =>
-                                handleUpdate({
-                                    dueDate: newDate ? new Date(newDate).toISOString() : null
-                                })
-                            }
-                            hasEdit={canChangeStatus}
-                        />
-                    </Box>
+                                : ''}
+                        </Typography>
+                    </SidebarRow>
+
+                    {/* Start Date */}
+                    <DatePickerRow
+                        label="Start Date"
+                        value={normalizedIssue.startDate}
+                        onChange={(newDate) =>
+                            handleUpdate({
+                                startDate: newDate ? new Date(newDate).toISOString() : null
+                            })
+                        }
+                        hasEdit={canChangeStatus}
+                    />
+                    {/* End Date */}
+                    <DatePickerRow
+                        label="End Date"
+                        value={normalizedIssue.dueDate}
+                        onChange={(newDate) =>
+                            handleUpdate({
+                                dueDate: newDate ? new Date(newDate).toISOString() : null
+                            })
+                        }
+                        hasEdit={canChangeStatus}
+                    />
                 </Box>
             </Box>
 
@@ -417,7 +431,6 @@ DetailsSidebar.propTypes = {
     canChangeStatus: PropTypes.bool.isRequired,
     canAssignIssue: PropTypes.bool.isRequired,
     canDeleteIssue: PropTypes.bool.isRequired,
-    isAdmin: PropTypes.bool.isRequired
 };
 
 export default DetailsSidebar;

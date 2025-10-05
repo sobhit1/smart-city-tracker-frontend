@@ -87,7 +87,6 @@ function IssueDetails() {
                         canChangeStatus={canChangeStatus}
                         canAssignIssue={canAssignIssue}
                         canDeleteIssue={canDeleteIssue}
-                        isAdmin={isAdmin}
                     />
                 </Box>
             </Box>

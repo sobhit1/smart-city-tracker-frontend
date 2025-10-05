@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Box,
@@ -16,7 +16,7 @@ import {
   ToggleButtonGroup,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 
 import { useIssues } from '../../hooks/useIssues';
@@ -27,12 +27,28 @@ const columns = [
   { field: 'id', headerName: 'ID', width: 100 },
   { field: 'title', headerName: 'Title', flex: 1, minWidth: 250 },
   { field: 'category', headerName: 'Category', width: 180 },
-  { field: 'priority', headerName: 'Priority', width: 120, renderCell: (params) => {
+  {
+    field: 'priority',
+    headerName: 'Priority',
+    width: 120,
+    renderCell: (params) => {
+      const value = params.value || 'Medium';
       const priorityColors = { Highest: 'error', High: 'error', Medium: 'warning', Low: 'success', Lowest: 'info' };
-      return <Chip label={params.value || 'N/A'} color={priorityColors[params.value] || 'default'} size="small" />;
-  }},
-  { field: 'reporter', headerName: 'Reported By', width: 150, valueGetter: (value) => value?.name || 'N/A' },
-  { field: 'assignee', headerName: 'Assigned To', width: 150, valueGetter: (value) => value?.name || 'Unassigned' },
+      return <Chip label={value} color={priorityColors[value] || 'default'} size="small" />;
+    }
+  },
+  {
+    field: 'reporter',
+    headerName: 'Reported By',
+    width: 150,
+    valueGetter: (value) => value?.name || 'N/A'
+  },
+  {
+    field: 'assignee',
+    headerName: 'Assigned To',
+    width: 150,
+    valueGetter: (value) => value?.name || 'Unassigned'
+  },
   {
     field: 'status',
     headerName: 'Status',
@@ -47,18 +63,6 @@ const columns = [
     headerName: 'Date Reported',
     width: 180,
     valueFormatter: (value) => new Date(value).toLocaleString(),
-  },
-  {
-    field: 'actions',
-    headerName: 'Actions',
-    width: 120,
-    sortable: false,
-    disableColumnMenu: true,
-    renderCell: (params) => (
-      <Button variant="outlined" size="small" component={RouterLink} to={`/issue/${params.row.id}`}>
-        View
-      </Button>
-    ),
   },
 ];
 
@@ -75,17 +79,22 @@ function Dashboard() {
     pageSize: 10,
   });
 
-  const { data, isLoading, isError, error } = useIssues(filters, paginationModel);
+  const { data, isLoading, isError, error, refetch } = useIssues(filters, paginationModel, {
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
   const { data: categoriesData } = useCategories();
   const { data: statusesData } = useStatuses();
-  
+
   const issues = data?.content || [];
   const rowCount = data?.totalElements || 0;
 
   const categories = ['All', ...(categoriesData?.map(c => c.name) || [])];
   const statuses = ['All', ...(statusesData?.map(s => s.name) || [])];
-  
+
   const isStaffOrAdmin = user?.roles.includes('ROLE_STAFF') || user?.roles.includes('ROLE_ADMIN');
+
+  const navigate = useNavigate();
 
   const handleFilterChange = (event, newView) => {
     setPaginationModel(prev => ({ ...prev, page: 0 }));
@@ -96,6 +105,10 @@ function Dashboard() {
       setFilters(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  useEffect(() => {
+    refetch();
+  }, []);
 
   if (isError) {
     return <Typography color="error">Error fetching issues: {error.message}</Typography>;
@@ -109,7 +122,7 @@ function Dashboard() {
           Report New Issue
         </Button>
       </Box>
-      
+
       {/* --- Filter Bar --- */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2} alignItems="center">
@@ -128,7 +141,7 @@ function Dashboard() {
               )}
             </ToggleButtonGroup>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TextField fullWidth variant="outlined" label="Search issues..." name="search" value={filters.search} onChange={handleFilterChange} />
           </Grid>
@@ -150,7 +163,7 @@ function Dashboard() {
           </Grid>
         </Grid>
       </Paper>
-      
+
       {/* --- Issues DataGrid --- */}
       <Paper sx={{ height: '60vh', width: '100%' }}>
         <DataGrid
@@ -163,6 +176,13 @@ function Dashboard() {
           paginationMode="server"
           onPaginationModelChange={setPaginationModel}
           disableRowSelectionOnClick
+          onRowClick={(params) => navigate(`/issue/${params.row.id}`)}
+          sx={{
+            cursor: 'pointer',
+            '& .MuiDataGrid-row:hover': {
+              backgroundColor: 'rgba(82, 153, 255, 0.08)',
+            },
+          }}
         />
       </Paper>
     </Box>
