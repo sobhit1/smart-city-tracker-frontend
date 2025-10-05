@@ -73,7 +73,7 @@ function HighlightedText({ text }) {
         switch (part.type) {
             case 'mention':
                 return (
-                    <Tooltip key={part.key} title={`Mentioned user: ${part.content}`}>
+                    <Tooltip key={part.key} title={`${part.content}`}>
                         <Chip
                             component="a"
                             href={part.url}
@@ -100,14 +100,14 @@ function HighlightedText({ text }) {
                                 },
                             }}
                             tabIndex={0}
-                            aria-label={`Mentioned user: ${part.content}`}
+                            aria-label={`${part.content}`}
                         />
                     </Tooltip>
                 );
 
             case 'plainMention':
                 return (
-                    <Tooltip key={part.key} title={`Mentioned user: ${part.content}`}>
+                    <Tooltip key={part.key} title={`${part.content}`}>
                         <Chip
                             label={`@${part.content}`}
                             size="small"
@@ -130,7 +130,7 @@ function HighlightedText({ text }) {
                                 },
                             }}
                             tabIndex={0}
-                            aria-label={`Mentioned user: ${part.content}`}
+                            aria-label={`${part.content}`}
                         />
                     </Tooltip>
                 );

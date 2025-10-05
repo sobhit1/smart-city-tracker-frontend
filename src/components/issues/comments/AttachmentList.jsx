@@ -185,7 +185,7 @@ function AttachmentList({ attachments, onDelete, canDelete = false }) {
                                         </Box>
                                     </Fade>
 
-                                    {/* File/Image preview */}
+                                    {/* Image preview */}
                                     {isImg ? (
                                         <Box
                                             sx={{

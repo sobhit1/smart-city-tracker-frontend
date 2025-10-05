@@ -139,7 +139,7 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item, isDeleting }
                         py: 0.75,
                         borderRadius: '6px',
                         boxShadow: 'none',
-                        minWidth: '90px',
+                        minWidth: '110px',
                         '&:hover': { 
                             backgroundColor: '#f85149',
                             boxShadow: '0 4px 12px rgba(248, 81, 73, 0.4)',
@@ -151,7 +151,10 @@ function DeleteConfirmationDialog({ open, onClose, onConfirm, item, isDeleting }
                     }}
                 >
                     {isDeleting ? (
-                        <CircularProgress size={18} sx={{ color: '#8b949e' }} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={18} sx={{ color: '#8b949e' }} />
+                            Deleting...
+                        </Box>
                     ) : (
                         'Delete'
                     )}

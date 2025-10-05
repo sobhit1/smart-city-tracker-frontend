@@ -92,7 +92,6 @@ function Login() {
               error={!!errors.userName}
               helperText={errors.userName?.message}
             />
-            {/* 4. Update the Password TextField */}
             <TextField
               margin="normal"
               required
@@ -127,7 +126,14 @@ function Login() {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
+              {loading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={24} color="inherit" />
+                  Logging in...
+                </Box>
+              ) : (
+                'Login'
+              )}
             </Button>
             <Link component={RouterLink} to={REGISTER_PATH} variant="body2">
               {"Don't have an account? Register"}

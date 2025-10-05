@@ -395,7 +395,7 @@ function ReportIssue() {
                             }
                           }}
                         >
-                          Attach Photos/Videos (up to 5)
+                          Attach Photos (up to 5)
                           <input type="file" hidden multiple accept="image/*" onChange={handleFileChange} />
                         </Button>
                         {errors.files && (

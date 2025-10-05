@@ -58,25 +58,25 @@ function Register() {
         resolver: yupResolver(schema),
     });
 
-    const { mutate: registerMutation, isPending: loading } = useRegister({ 
-         onSuccess: (data) => { 
-             dispatch(setAuth(data)); 
-             navigate(DASHBOARD_PATH); 
-         }, 
-         onError: (error) => { 
-             const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.'; 
-             dispatch(showNotification({ message: errorMessage, severity: 'error' })); 
-         }, 
-     }); 
+    const { mutate: registerMutation, isPending: loading } = useRegister({
+        onSuccess: (data) => {
+            dispatch(setAuth(data));
+            navigate(DASHBOARD_PATH);
+        },
+        onError: (error) => {
+            const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+            dispatch(showNotification({ message: errorMessage, severity: 'error' }));
+        },
+    });
 
-     const onSubmit = (data) => { 
-         const payload = { 
-             fullName: data.fullName, 
-             userName: data.userName, 
-             password: data.password, 
-         }; 
-         registerMutation(payload); 
-     };
+    const onSubmit = (data) => {
+        const payload = {
+            fullName: data.fullName,
+            userName: data.userName,
+            password: data.password,
+        };
+        registerMutation(payload);
+    };
 
     return (
         <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4 }}>
@@ -117,7 +117,6 @@ function Register() {
                             error={!!errors.userName}
                             helperText={errors.userName?.message}
                         />
-                        {/* 4. Update the Password TextField */}
                         <TextField
                             margin="normal"
                             required
@@ -132,19 +131,18 @@ function Register() {
                             helperText={errors.password?.message}
                             InputProps={{
                                 endAdornment: (
-                                  <InputAdornment position="end">
-                                    <IconButton
-                                      onClick={() => setShowPassword((show) => !show)}
-                                      onMouseDown={(e) => e.preventDefault()}
-                                      edge="end"
-                                    >
-                                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                  </InputAdornment>
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowPassword((show) => !show)}
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            edge="end"
+                                        >
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
                                 ),
-                              }}
+                            }}
                         />
-                        {/* 5. Update the Confirm Password TextField */}
                         <TextField
                             margin="normal"
                             required
@@ -158,17 +156,17 @@ function Register() {
                             helperText={errors.confirmPassword?.message}
                             InputProps={{
                                 endAdornment: (
-                                  <InputAdornment position="end">
-                                    <IconButton
-                                      onClick={() => setShowConfirmPassword((show) => !show)}
-                                      onMouseDown={(e) => e.preventDefault()}
-                                      edge="end"
-                                    >
-                                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                  </InputAdornment>
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowConfirmPassword((show) => !show)}
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            edge="end"
+                                        >
+                                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
                                 ),
-                              }}
+                            }}
                         />
                         <Button
                             type="submit"
@@ -177,7 +175,14 @@ function Register() {
                             sx={{ mt: 3, mb: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
+                            {loading ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={24} color="inherit" />
+                                    Registering...
+                                </Box>
+                            ) : (
+                                'Register'
+                            )}
                         </Button>
                         <Link component={RouterLink} to={LOGIN_PATH} variant="body2">
                             Already have an account? Login
