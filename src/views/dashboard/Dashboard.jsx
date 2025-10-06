@@ -74,12 +74,13 @@ function Dashboard() {
     status: 'All',
     view: 'all',
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 10,
   });
 
-  const { data, isLoading, isError, error, refetch } = useIssues(filters, paginationModel, {
+  const { data, isLoading, isError, error, refetch } = useIssues({ ...filters, search: debouncedSearch }, paginationModel, {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
   });
@@ -111,8 +112,18 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(filters.search);
+    }, 1000);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [filters.search]);
+
+  useEffect(() => {
     refetch();
-  }, []);
+  }, [debouncedSearch, filters.category, filters.status, filters.view, paginationModel.page, paginationModel.pageSize]);
 
   if (isError) {
     return <Typography color="error">Error fetching issues: {error.message}</Typography>;
