@@ -1,6 +1,6 @@
 // --- Base API URL ---
-export const BASE_API_URL = 'http://localhost:8080/api';
-// export const BASE_API_URL = 'https://smart-city-tracker-backend.onrender.com/api';
+// export const BASE_API_URL = 'http://localhost:8080/api';
+export const BASE_API_URL = 'https://smart-city-tracker-backend.onrender.com/api';
 
 // --- Authentication Endpoints ---
 export const AUTH_ENDPOINT = `${BASE_API_URL}/auth`;
